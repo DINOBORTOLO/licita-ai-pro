@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta - LICITA AI PRO</title>
+    <style>
+        /* Mesmos estilos do login + específicos */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1e3a5f;
+            --primary-dark: #0f1f33;
+            --secondary: #c9a227;
+            --accent: #2c5282;
+            --success: #065f46;
+            --warning: #d97706;
+            --danger: #991b1b;
+            --gray-100: #f7fafc;
+            --gray-800: #1a202c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .register-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+        }
+        
+        .register-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .register-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+        
+        .register-body {
+            padding: 30px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--gray-800);
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+        }
+        
+        .plano-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .plano-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .plano-card:hover {
+            border-color: var(--primary);
+        }
+        
+        .plano-card.selected {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        
+        .plano-card input {
+            display: none;
+        }
+        
+        .plano-card h4 {
+            font-size: 0.9em;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .plano-card .preco {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: var(--gray-800);
+        }
+        
+        .plano-card .preco span {
+            font-size: 0.7em;
+            font-weight: 400;
+            color: #64748b;
+        }
+        
+        .btn-register {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(6, 95, 70, 0.3);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+        
+        .terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 20px 0;
+            font-size: 0.85em;
+            color: #64748b;
+        }
+        
+        .terms input {
+            margin-top: 3px;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .login-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h1>🚀 Comece a Licitar com Inteligência</h1>
+            <p>Crie sua conta e tenha acesso a oportunidades reais do governo</p>
+        </div>
+        
+        <div class="register-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('registro') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nome">Nome completo *</label>
+                        <input type="text" id="nome" name="nome" required 
+                               placeholder="João Silva">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email profissional *</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="joao@empresa.com">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="empresa">Nome da empresa</label>
+                        <input type="text" id="empresa" name="empresa" 
+                               placeholder="Empresa LTDA">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cnpj">CNPJ</label>
+                        <input type="text" id="cnpj" name="cnpj" 
+                               placeholder="00.000.000/0000-00">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="telefone">Telefone *</label>
+                        <input type="tel" id="telefone" name="telefone" required 
+                               placeholder="(11) 99999-9999">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Senha * (mínimo 8 caracteres)</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="••••••••" minlength="8">
+                    </div>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px; color: var(--primary); font-size: 1.1em;">
+                    Escolha seu plano:
+                </h3>
+                
+                <div class="plano-selection">
+                    {% for plano_id, plano in planos.items() %}
+                    <label class="plano-card {% if plano_id == 'gratuito' %}selected{% endif %}" 
+                           onclick="selectPlano(this)">
+                        <input type="radio" name="plano" value="{{ plano_id }}" 
+                               {% if plano_id == 'gratuito' %}checked{% endif %}>
+                        <h4>{{ plano.nome }}</h4>
+                        <div class="preco">
+                            {% if plano.preco == 0 %}
+                                Grátis
+                            {% else %}
+                                R$ {{ "%.0f"|format(plano.preco) }}<span>/mês</span>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                <div class="terms">
+                    <input type="checkbox" id="termos" name="termos" required>
+                    <label for="termos">
+                        Concordo com os <a href="#">Termos de Uso</a> e 
+                        <a href="#">Política de Privacidade</a>. Autorizo o uso dos meus 
+                        dados para processamento de pagamento e envio de notificações 
+                        sobre licitações.
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-register">
+                    ✅ Criar minha conta
+                </button>
+            </form>
+            
+            <div class="login-link">
+                <p>Já tem uma conta? <a href="{{ url_for('login') }}">Faça login</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function selectPlano(element) {
+            document.querySelectorAll('.plano-card').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+            element.querySelector('input').checked = true;
+        }
+        
+        // Máscara para CNPJ
+        document.getElementById('cnpj').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\\D/g, '');
+            if (value.length <= 14) {
+                value = value.replace(/(\\d{2})(\\d)/, '$1.$2');
+                value = value.replace(/(\\d{3})(\\d)/, '$1.$2');
+                value = value.replace(/(\\d{3})(\\d)/, '$1/$2');
+                value = value.replace(/(\\d{4})(\\d)/, '$1-$2');
+            }
+            e.target.value = value;
+        });
+        
+        // Máscara para telefone
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\\d{2})(\\d)/, '($1) $2');
+                value = value.replace(/(\\d{5})(\\d)/, '$1-$2');
+            }
+            e.target.value = value;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,378 @@
+==========================================  
+LICITA_AI_PRO - CODIGO COMPLETO  
+Gerado em: 12.03.2026 14:37:00.73  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: app.py 
+========================================== 
+from flask import Flask, render_template, jsonify, request
+import sqlite3
+import os
+from datetime import datetime
+
+app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'licitacoes.db')
+
+# Garantir pasta data existe
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route('/')
+def index():
+    """Serve o dashboard HTML completo"""
+    return render_template('index.html')
+
+@app.route('/api/licitacoes')
+def get_licitacoes():
+    """Busca licitaÃ§Ãµes do banco ou retorna demo"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("""
+            SELECT id, orgao, objeto, valor_estimado, data_publicacao, status
+            FROM licitacoes 
+            ORDER BY data_publicacao DESC 
+            LIMIT 100
+        """)
+        
+        rows = []
+        for row in cur.fetchall():
+            rows.append({
+                'id': row['id'],
+                'orgao': row['orgao'],
+                'objeto': row['objeto'],
+                'valor_estimado': float(row['valor_estimado']) if row['valor_estimado'] else 0,
+                'data_publicacao': row['data_publicacao'],
+                'status': row['status'] or 'Aberto'
+            })
+        db.close()
+        
+        return jsonify(rows)
+        
+    except Exception as e:
+        print(f"Erro banco: {e}")
+        return jsonify([])
+
+@app.route('/api/estatisticas')
+def estatisticas():
+    """EstatÃ­sticas para o header"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT COUNT(*) as total, SUM(valor_estimado) as valor FROM licitacoes")
+        row = cur.fetchone()
+        db.close()
+        
+        return jsonify({
+            'total': row['total'] or 418,
+            'visualizando': min(100, row['total'] or 418),
+            'valor_disputa': row['valor'] or 195900000,
+            'cobertura': 24
+        })
+    except:
+        return jsonify({
+            'total': 418,
+            'visualizando': 100,
+            'valor_disputa': 195900000,
+            'cobertura': 24
+        })
+
+@app.route('/health')
+def health_check():
+    """Verifica se o servidor estÃ¡ online"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'LICITA AI PRO'
+    })
+
+# ==========================================
+# CONFIGURAÃ‡ÃƒO PARA RODAR LOCAL E ONLINE
+# ==========================================
+
+if __name__ == '__main__':
+    print("""
+    â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+    â•‘     LICITA AI PRO - Servidor Ativo       â•‘
+    â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+    â•‘  Dashboard: http://localhost:5000        â•‘
+    â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    """)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    # Modo produÃ§Ã£o (Render)
+    pass 
+[FIM DO ARQUIVO app.py] 
+
+ 
+========================================== 
+ARQUIVO: start.bat 
+========================================== 
+@echo off
+cd /d D:\LICITA_AI_PRO
+echo ======================================
+echo    LICITA AI PRO - Iniciando...
+echo ======================================
+python -c "import flask" 2>nul || pip install flask
+echo.
+python app.py
+pause 
+[FIM DO ARQUIVO start.bat] 
+
+ 
+========================================== 
+ARQUIVO: requirements.txt 
+========================================== 
+flask==3.0.0
+gunicorn==21.2.0 
+[FIM DO ARQUIVO requirements.txt] 
+
+ 
+========================================== 
+ARQUIVO: sistema_completo.txt 
+========================================== 
+==========================================  
+LICITA_AI_PRO - CODIGO COMPLETO  
+Gerado em: 12.03.2026 14:37:00.73  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: app.py 
+========================================== 
+from flask import Flask, render_template, jsonify, request
+import sqlite3
+import os
+from datetime import datetime
+
+app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'licitacoes.db')
+
+# Garantir pasta data existe
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route('/')
+def index():
+    """Serve o dashboard HTML completo"""
+    return render_template('index.html')
+
+@app.route('/api/licitacoes')
+def get_licitacoes():
+    """Busca licitaÃ§Ãµes do banco ou retorna demo"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("""
+            SELECT id, orgao, objeto, valor_estimado, data_publicacao, status
+            FROM licitacoes 
+            ORDER BY data_publicacao DESC 
+            LIMIT 100
+        """)
+        
+        rows = []
+        for row in cur.fetchall():
+            rows.append({
+                'id': row['id'],
+                'orgao': row['orgao'],
+                'objeto': row['objeto'],
+                'valor_estimado': float(row['valor_estimado']) if row['valor_estimado'] else 0,
+                'data_publicacao': row['data_publicacao'],
+                'status': row['status'] or 'Aberto'
+            })
+        db.close()
+        
+        return jsonify(rows)
+        
+    except Exception as e:
+        print(f"Erro banco: {e}")
+        return jsonify([])
+
+@app.route('/api/estatisticas')
+def estatisticas():
+    """EstatÃ­sticas para o header"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT COUNT(*) as total, SUM(valor_estimado) as valor FROM licitacoes")
+        row = cur.fetchone()
+        db.close()
+        
+        return jsonify({
+            'total': row['total'] or 418,
+            'visualizando': min(100, row['total'] or 418),
+            'valor_disputa': row['valor'] or 195900000,
+            'cobertura': 24
+        })
+    except:
+        return jsonify({
+            'total': 418,
+            'visualizando': 100,
+            'valor_disputa': 195900000,
+            'cobertura': 24
+        })
+
+@app.route('/health')
+def health_check():
+    """Verifica se o servidor estÃ¡ online"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'LICITA AI PRO'
+    })
+
+# ==========================================
+# CONFIGURAÃ‡ÃƒO PARA RODAR LOCAL E ONLINE
+# ==========================================
+
+if __name__ == '__main__':
+    print("""
+    â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+    â•‘     LICITA AI PRO - Servidor Ativo       â•‘
+    â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+    â•‘  Dashboard: http://localhost:5000        â•‘
+    â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    """)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    # Modo produÃ§Ã£o (Render)
+    pass 
+[FIM DO ARQUIVO app.py] 
+
+ 
+========================================== 
+ARQUIVO: start.bat 
+========================================== 
+@echo off
+cd /d D:\LICITA_AI_PRO
+echo ======================================
+echo    LICITA AI PRO - Iniciando...
+echo ======================================
+python -c "import flask" 2>nul || pip install flask
+echo.
+python app.py
+pause 
+[FIM DO ARQUIVO start.bat] 
+
+ 
+========================================== 
+ARQUIVO: requirements.txt 
+========================================== 
+flask==3.0.0
+gunicorn==21.2.0 
+[FIM DO ARQUIVO requirements.txt] 
+
+ 
+========================================== 
+ARQUIVO: sistema_completo.txt 
+========================================== 
+==========================================  
+LICITA_AI_PRO - CODIGO COMPLETO  
+Gerado em: 12.03.2026 14:37:00.73  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: app.py 
+======================================== 
+[FIM DO ARQUIVO sistema_completo.txt] 
+
+Estrutura de pastas: 
+Listagem de caminhos de pasta
+O n£mero de s‚rie do volume ‚ DA28-4EDE
+D:.
+³   app.py
+³   render.yaml
+³   requirements.txt
+³   sistema_completo.txt
+³   start.bat
+³   
+ÃÄÄÄbackup_original
+³   ³   0]
+³   ³   analisador.py
+³   ³   analise_mercado.py
+³   ³   app.py
+³   ³   app_debug.log
+³   ³   app_final.py
+³   ³   backup_sistema.bat
+³   ³   banco.db
+³   ³   banco.py
+³   ³   config.py
+³   ³   config_modo.py
+³   ³   corrigir_e_iniciar.bat
+³   ³   dashboard.html
+³   ³   demo_dados.py
+³   ³   diagnostico.py
+³   ³   diagnostico_banco.py
+³   ³   diagnostico_servidor.py
+³   ³   estrategia_profissional.py
+³   ³   extrator_edital.py
+³   ³   fontes.py
+³   ³   fontes_hibrido.py
+³   ³   iniciar.bat
+³   ³   iniciar_robo.bat
+³   ³   INICIAR_SERVIDOR.bat
+³   ³   iniciar_tudo.py
+³   ³   keywords.txt
+³   ³   migrar_banco.py
+³   ³   MODULO_ANALISE_EDITAL.PY
+³   ³   popular.py
+³   ³   popular_banco.bat
+³   ³   popular_banco.py
+³   ³   python.txt
+³   ³   requisitos.txt
+³   ³   robo.py
+³   ³   robo_corrigido.py
+³   ³   sistema_completo.txt
+³   ³   sistema_completo1.1.txt
+³   ³   sistema_completo1.txt
+³   ³   verificar.py
+³   ³   
+³   ÃÄÄÄbackups
+³   ÃÄÄÄeditais_cache
+³   ÃÄÄÄstatic
+³   ÃÄÄÄtemplates
+³   ³       dashboard.html
+³   ³       detalhe.html
+³   ³       edital_embutido.html
+³   ³       index.html
+³   ³       migrar_dados.py
+³   ³       precificador.html
+³   ³       precificador_avancado.html
+³   ³       precificador_pro.html
+³   ³       visualizador.html
+³   ³       
+³   ÀÄÄÄ__pycache__
+³           analisador.cpython-312.pyc
+³           analise_mercado.cpython-312.pyc
+³           app.cpython-312.pyc
+³           banco.cpython-312.pyc
+³           config.cpython-312.pyc
+³           demo_dados.cpython-312.pyc
+³           estrategia_profissional.cpython-312.pyc
+³           extrator_edital.cpython-312.pyc
+³           fontes.cpython-312.pyc
+³           fontes_hibrido.cpython-312.pyc
+³           
+ÃÄÄÄdata
+³       licitacoes.db
+³       
+ÃÄÄÄmodules
+ÃÄÄÄstatic
+ÀÄÄÄtemplates
+        dashboard.html
+        index.html
+        start.bat
+        
