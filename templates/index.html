@@ -1566,22 +1566,39 @@
         // FUNÇÃO: ABRIR EDITAL COM DADOS REAIS
         // ==========================================
         
-        async function abrirEdital(id, orgao, objeto, valor, data, numeroProcesso = '') {
-            const numEdital = String(id).replace('#', '');
-            
-            // Busca link real do edital se disponível
-            let linkEdital = '#';
-            let linkSistema = '#';
-            
-            // Tenta encontrar nos dados cacheados
-            const licitacao = cacheLicitacoes.find(l => l.id == id);
-            if (licitacao) {
-                if (licitacao.link_edital) linkEdital = licitacao.link_edital;
-                // Gera link para o sistema oficial
-                linkSistema = `https://www.gov.br/compras/pt-br/acesso-a-informacao/consulte-as-compras`;
-            }
-            
-            const edital = `EDITAL DE LICITAÇÃO Nº ${numEdital}/2026
+        // ==========================================
+// FUNÇÃO: ABRIR EDITAL COM LINKS FUNCIONAIS
+// ==========================================
+        
+async function abrirEdital(id, orgao, objeto, valor, data, numeroProcesso = '') {
+    const numEdital = String(id).replace('#', '');
+    
+    // Busca dados reais do cache se disponível
+    const licitacao = cacheLicitacoes.find(l => l.id == id);
+    
+    // Constrói links funcionais para os portais oficiais
+    // Link 1: Portal Nacional de Contratações Públicas (PNCP) - Lista de editais
+    const linkPNCP = 'https://pncp.gov.br/app/editais';
+    
+    // Link 2: Compras.gov.br - Consulta detalhada
+    const linkCompras = 'https://www.gov.br/compras/pt-br/acesso-a-informacao/consulta-detalhada';
+    
+    // Link 3: Portal da Transparência - Licitações
+    const linkTransparencia = 'https://portaldatransparencia.gov.br/licitacoes';
+    
+    // Se tiver número do processo, tenta construir link mais específico
+    let linkEspecifico = linkPNCP;
+    if (numeroProcesso && numeroProcesso.includes('/')) {
+        // Extrai ano e número do processo se possível
+        const partes = numeroProcesso.split('/');
+        if (partes.length >= 2) {
+            const ano = partes[1].substring(0, 4);
+            // Link para busca no PNCP (funcional)
+            linkEspecifico = `https://pncp.gov.br/app/editais?q=${encodeURIComponent(numeroProcesso)}&status=recebendo_proposta&pagina=1`;
+        }
+    }
+    
+    const edital = `EDITAL DE LICITAÇÃO Nº ${numEdital}/2026
 
 ÓRGÃO CONTRATANTE:
 ${orgao}
@@ -1596,7 +1613,7 @@ DATA DE PUBLICAÇÃO:
 ${formatarDataBR(data)}
 
 NÚMERO DO PROCESSO:
-${numeroProcesso || 'Aguardando publicação no DOU'}
+${numeroProcesso || 'Consultar no portal oficial'}
 
 MODALIDADE:
 Pregão Eletrônico (Lei 14.133/2021)
@@ -1604,11 +1621,19 @@ Pregão Eletrônico (Lei 14.133/2021)
 CRITÉRIO DE JULGAMENTO:
 Menor preço por item
 
-ACESSO AO EDITAL:
-O edital completo encontra-se disponível no Portal Nacional de Contratações Públicas (PNCP) e no sistema Compras.gov.br
+COMO ACESSAR O EDITAL ORIGINAL:
+
+1. Portal Nacional de Contratações Públicas (PNCP):
+   https://pncp.gov.br/app/editais
+
+2. Portal de Compras do Governo Federal:
+   https://www.gov.br/compras/pt-br/acesso-a-informacao/consulta-detalhada
+
+3. Portal da Transparência:
+   https://portaldatransparencia.gov.br/licitacoes
 
 DISPUTA ELETRÔNICA:
-A sessão pública de disputa será realizada em ambiente virtual, mediante acesso por meio de certificado digital.
+A sessão pública de disputa será realizada em ambiente virtual do PNCP, mediante acesso por meio de certificado digital.
 
 INFORMAÇÕES COMPLEMENTARES:
 Para maiores informações, consulte o Portal da Transparência da União ou o sítio eletrônico do órgão contratante.
@@ -1616,100 +1641,106 @@ Para maiores informações, consulte o Portal da Transparência da União ou o s
 Lei de Acesso à Informação (LAI) - Lei nº 12.527/2011
 Lei de Licitações e Contratos Administrativos - Lei nº 14.133/2021`;
 
-            const caracteristicas = [
-                { titulo: 'Modalidade', valor: 'Pregão Eletrônico' },
-                { titulo: 'Tipo', valor: objeto.includes('Serviço') || objeto.includes('serviço') ? 'Serviço' : 'Compra' },
-                { titulo: 'Prazo', valor: 'Até 180 dias' },
-                { titulo: 'Garantia', valor: '5% do valor' },
-                { titulo: 'Critério', valor: 'Menor Preço' },
-                { titulo: 'Visita Técnica', valor: 'Facultativa' },
-                { titulo: 'Margem Pref.', valor: 'Aplicável ME/EPP' },
-                { titulo: 'Parcelemaneto', valor: 'Conforme edital' }
-            ];
+    const caracteristicas = [
+        { titulo: 'Modalidade', valor: 'Pregão Eletrônico' },
+        { titulo: 'Tipo', valor: objeto.includes('Serviço') || objeto.includes('serviço') ? 'Serviço' : 'Compra' },
+        { titulo: 'Prazo', valor: 'Até 180 dias' },
+        { titulo: 'Garantia', valor: '5% do valor' },
+        { titulo: 'Critério', valor: 'Menor Preço' },
+        { titulo: 'Visita Técnica', valor: 'Facultativa' },
+        { titulo: 'Margem Pref.', valor: 'Aplicável ME/EPP' },
+        { titulo: 'Parcelemaneto', valor: 'Conforme edital' }
+    ];
 
-            let caracHtml = '';
-            caracteristicas.forEach(c => {
-                caracHtml += `
-                    <div class="caracteristica-card">
-                        <div class="caracteristica-titulo">${c.titulo}</div>
-                        <div class="caracteristica-desc">${c.valor}</div>
-                    </div>
-                `;
-            });
+    let caracHtml = '';
+    caracteristicas.forEach(c => {
+        caracHtml += `
+            <div class="caracteristica-card">
+                <div class="caracteristica-titulo">${c.titulo}</div>
+                <div class="caracteristica-desc">${c.valor}</div>
+            </div>
+        `;
+    });
 
-            const html = `
-                <div class="edital-header">
-                    <h4>📋 Licitação Oficial #${numEdital}/2026</h4>
-                    <div class="edital-info">
-                        <div class="info-item">
-                            <span class="info-label">Órgão Contratante</span>
-                            <span class="info-value">${orgao}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Objeto</span>
-                            <span class="info-value">${objeto}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Valor Estimado</span>
-                            <span class="info-value" style="color: var(--success); font-size: 1.1em;">${valor}</span>
-                        </div>
-                        div class="info-item">
-                            <span class="info-label">Publicação</span>
-                            <span class="info-value">${formatarDataBR(data)}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Processo</span>
-                            <span class="info-value">${numeroProcesso || 'Não informado'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Situação</span>
-                            <span class="info-value" style="color: var(--success);">🟢 Aberta para propostas</span>
-                        </div>
-                    </div>
+    const html = `
+        <div class="edital-header">
+            <h4>📋 Licitação Oficial #${numEdital}/2026</h4>
+            <div class="edital-info">
+                <div class="info-item">
+                    <span class="info-label">Órgão Contratante</span>
+                    <span class="info-value">${orgao}</span>
                 </div>
-
-                <div class="edital-link">
-                    <a href="${linkEdital}" target="_blank" class="btn-download" onclick="return verificarLinkEdital(this);">
-                        📥 Download Edital Oficial (PDF)
-                    </a>
+                <div class="info-item">
+                    <span class="info-label">Objeto</span>
+                    <span class="info-value">${objeto}</span>
                 </div>
-
-                <div class="edital-link" style="margin-top: 15px;">
-                    <a href="https://www.gov.br/compras/pt-br/acesso-a-informacao/consulte-as-compras" target="_blank" class="btn" style="background: var(--primary);">
-                        🔗 Acessar no Compras.gov.br
-                    </a>
-                    <a href="https://portaldatransparencia.gov.br/licitacoes" target="_blank" class="btn" style="background: var(--accent); margin-left: 10px;">
-                        🔗 Portal da Transparência
-                    </a>
+                <div class="info-item">
+                    <span class="info-label">Valor Estimado</span>
+                    <span class="info-value" style="color: var(--success); font-size: 1.1em;">${valor}</span>
                 </div>
-
-                <h4 style="margin-top: 25px; color: var(--primary);">📄 Texto do Edital (Resumo)</h4>
-                <div class="edital-texto">${edital}</div>
-
-                <h4 style="margin-top: 25px; color: var(--primary);">🔍 Características da Contratação</h4>
-                <div class="caracteristicas-grid">${caracHtml}</div>
-
-                <div class="edital-acoes">
-                    <button onclick="abrirPrecificacaoInteligente(${id}, '${escapeString(orgao)}', '${escapeString(objeto)}', ${parseFloat(valor.replace(/[^\d]/g, ''))})" class="btn btn-precificar">
-                        🧠 Precificar Agora
-                    </button>
-                    <button onclick="abrirChecklist(${id}, '${escapeString(objeto)}')" class="btn btn-checklist">
-                        ✓ Checklist Documental
-                    </button>
-                    <button onclick="window.print()" class="btn btn-print">
-                        🖨️ Imprimir Resumo
-                    </button>
+                <div class="info-item">
+                    <span class="info-label">Publicação</span>
+                    <span class="info-value">${formatarDataBR(data)}</span>
                 </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: var(--gray-100); border-radius: 8px; font-size: 0.8em; color: var(--gray-600); text-align: center;">
-                    <strong>Fonte oficial:</strong> Este edital é um documento público federal disponibilizado nos termos da Lei de Acesso à Informação (LAI).
-                    <br>Para o documento original completo, acesse o Portal Nacional de Contratações Públicas.
+                <div class="info-item">
+                    <span class="info-label">Processo</span>
+                    <span class="info-value">${numeroProcesso || 'Consultar portal'}</span>
                 </div>
-            `;
-            
-            document.getElementById('editalContainer').innerHTML = html;
-            document.getElementById('modalEdital').classList.add('ativo');
-        }
+                <div class="info-item">
+                    <span class="info-label">Situação</span>
+                    <span class="info-value" style="color: var(--success);">🟢 Aberta para propostas</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #86efac;">
+            <h4 style="color: var(--success); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                🔗 Acessar Edital nos Portais Oficiais
+            </h4>
+            <p style="color: var(--gray-600); font-size: 0.9em; margin-bottom: 15px;">
+                Clique nos botões abaixo para acessar o edital completo nos sistemas oficiais do governo federal:
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <a href="${linkEspecifico}" target="_blank" class="btn-download" style="background: var(--success); text-decoration: none; font-size: 0.85em; padding: 12px 20px;">
+                    🏛️ Buscar no PNCP
+                </a>
+                <a href="${linkCompras}" target="_blank" class="btn" style="background: var(--primary); text-decoration: none;">
+                    🏢 Compras.gov.br
+                </a>
+                <a href="${linkTransparencia}" target="_blank" class="btn" style="background: var(--accent); text-decoration: none;">
+                    📊 Portal Transparência
+                </a>
+            </div>
+        </div>
+
+        <h4 style="margin-top: 25px; color: var(--primary);">📄 Texto do Edital (Resumo Informativo)</h4>
+        <div class="edital-texto">${edital}</div>
+
+        <h4 style="margin-top: 25px; color: var(--primary);">🔍 Características da Contratação</h4>
+        <div class="caracteristicas-grid">${caracHtml}</div>
+
+        <div class="edital-acoes">
+            <button onclick="abrirPrecificacaoInteligente(${id}, '${escapeString(orgao)}', '${escapeString(objeto)}', ${parseFloat(valor.replace(/[^\d]/g, ''))})" class="btn btn-precificar">
+                🧠 Precificar Agora
+            </button>
+            <button onclick="abrirChecklist(${id}, '${escapeString(objeto)}')" class="btn btn-checklist">
+                ✓ Checklist Documental
+            </button>
+            <button onclick="window.print()" class="btn btn-print">
+                🖨️ Imprimir Resumo
+            </button>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: var(--gray-100); border-radius: 8px; font-size: 0.8em; color: var(--gray-600); text-align: center; border-left: 4px solid var(--secondary);">
+            <strong>ℹ️ Informação importante:</strong> Este é um resumo informativo. O documento original completo está disponível exclusivamente nos portais oficiais do governo federal (PNCP, Compras.gov.br ou Portal da Transparência).
+            <br><br>
+            <em>Dados fornecidos nos termos da Lei de Acesso à Informação (LAI) - Lei nº 12.527/2011</em>
+        </div>
+    `;
+    
+    document.getElementById('editalContainer').innerHTML = html;
+    document.getElementById('modalEdital').classList.add('ativo');
+}
 
         function verificarLinkEdital(elemento) {
             if (elemento.getAttribute('href') === '#') {
