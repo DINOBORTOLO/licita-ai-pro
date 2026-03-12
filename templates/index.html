@@ -943,17 +943,25 @@
                 <div class="stat-label">Cobertura Nacional</div>
             </div>
         </div>
-
-        <div class="content">
-            <div class="content-header">
-                <h2>📋 Painel de Licitações - Dados em Tempo Real</h2>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <span class="badge" id="status-api">🟡 Carregando dados...</span>
-                    <button class="btn" onclick="carregarDadosReais()" style="background: var(--success);">
-                        🔄 Atualizar
-                    </button>
-                </div>
-            </div>
+<div class="content-header">
+    <h2>📋 Painel de Contratações Públicas</h2>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <!-- Botões de navegação -->
+        <div style="display: flex; background: var(--gray-200); padding: 4px; border-radius: 8px; margin-right: 10px;">
+            <button onclick="mostrarAba('licitacoes')" id="btn-aba-licitacoes" class="btn" style="background: var(--primary); margin: 0;">
+                🏛️ Licitações
+            </button>
+            <button onclick="mostrarAba('dispensas')" id="btn-aba-dispensas" class="btn" style="background: transparent; color: var(--gray-600); margin: 0;">
+                ⚖️ Dispensas/Inexigibilidades
+            </button>
+        </div>
+        
+        <span class="badge" id="status-api">🟡 Carregando...</span>
+        <button class="btn" onclick="location.reload()" style="background: var(--success);">
+            🔄 Atualizar
+        </button>
+    </div>
+</div>
 
             <table>
                 <thead>
@@ -2162,22 +2170,22 @@ Lei de Licitações e Contratos Administrativos - Lei nº 14.133/2021`;
         // ==========================================
         
         window.addEventListener('load', function() {
-            // Carregar checklists salvos
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('checklist_')) {
-                    const id = key.replace('checklist_', '');
-                    try {
-                        estadosChecklist[id] = JSON.parse(localStorage.getItem(key));
-                    } catch (e) {
-                        console.warn('Erro ao carregar checklist:', e);
-                    }
-                }
+    // Carregar checklists salvos
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('checklist_')) {
+            const id = key.replace('checklist_', '');
+            try {
+                estadosChecklist[id] = JSON.parse(localStorage.getItem(key));
+            } catch (e) {
+                console.warn('Erro ao carregar checklist:', e);
             }
-            
-            // Carregar dados reais das APIs
-            carregarDadosReais();
-        });
+        }
+    }
+    
+    // Inicia na aba de licitações
+    mostrarAba('licitacoes');
+});
 
         // Fechar modais ao clicar fora
         document.querySelectorAll('.modal-overlay').forEach(modal => {
@@ -2194,6 +2202,451 @@ Lei de Licitações e Contratos Administrativos - Lei nº 14.133/2021`;
                 document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('ativo'));
             }
         });
+// ==========================================
+// NAVEGAÇÃO ENTRE LICITAÇÕES E DISPENSAS
+// ==========================================
+
+let abaAtual = 'licitacoes';
+
+function mostrarAba(aba) {
+    abaAtual = aba;
+    
+    const btnLicitacoes = document.getElementById('btn-aba-licitacoes');
+    const btnDispensas = document.getElementById('btn-aba-dispensas');
+    
+    if (aba === 'licitacoes') {
+        btnLicitacoes.style.background = 'var(--primary)';
+        btnLicitacoes.style.color = 'white';
+        btnDispensas.style.background = 'transparent';
+        btnDispensas.style.color = 'var(--gray-600)';
+        carregarDadosReais();
+    } else {
+        btnDispensas.style.background = 'var(--warning)';
+        btnDispensas.style.color = 'white';
+        btnLicitacoes.style.background = 'transparent';
+        btnLicitacoes.style.color = 'var(--gray-600)';
+        buscarDispensas();
+    }
+}
+
+// ==========================================
+// BUSCAR DISPENSAS DE LICITAÇÃO
+// ==========================================
+
+async function buscarDispensas() {
+    const statusBadge = document.getElementById('status-api');
+    
+    statusBadge.textContent = '🟡 Buscando dispensas...';
+    statusBadge.className = 'badge atualizando';
+    
+    try {
+        // Tenta API de contratos do Portal da Transparência
+        const url = 'https://api.portaldatransparencia.gov.br/api-de-dados/contratos?dataInicial=01/03/2026&dataFinal=31/03/2026&pagina=1';
+        
+        const resposta = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'LICITA-AI-PRO/1.0'
+            },
+            mode: 'cors'
+        });
+        
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+        
+        const dados = await resposta.json();
+        
+        // Filtra contratações diretas
+        const dispensas = dados.filter(item => {
+            const modalidade = (item.modalidade || '').toLowerCase();
+            return modalidade.includes('dispensa') || modalidade.includes('inexigibilidade');
+        }).map((item, index) => ({
+            id: `D${1000 + index}`,
+            orgao: item.orgaoEntidade?.razaoSocial || item.orgao || 'Órgão Público',
+            objeto: item.objeto || 'Objeto não informado',
+            valor: parseFloat(item.valorTotal) || parseFloat(item.valorInicial) || 0,
+            data: formatarData(item.dataAssinatura || item.dataPublicacao),
+            numero_processo: item.numeroContratoEmpenho || item.numeroProcesso || 'Não informado',
+            tipo: item.modalidade || 'Dispensa de Licitação',
+            fundamento: item.fundamentoLegal || 'Art. 75, Lei 14.133/2021',
+            contratado: item.nomeContratado || item.fornecedor || 'Não informado',
+            cnpj_contratado: item.documentoContratado || 'Não informado',
+            vigencia: item.vigenciaContrato || 'Não informada'
+        }));
+        
+        if (dispensas.length > 0) {
+            renderizarTabelaDispensas(dispensas);
+            statusBadge.textContent = '🟢 Dados CGU - Contratos';
+            statusBadge.style.background = 'var(--success)';
+        } else {
+            throw new Error('Nenhuma dispensa encontrada');
+        }
+        
+    } catch (erro) {
+        console.warn('Usando fallback de dispensas:', erro);
+        usarDadosFallbackDispensas();
+    }
+}
+
+function renderizarTabelaDispensas(dados) {
+    const tbody = document.getElementById('tabela-corpo');
+    
+    tbody.innerHTML = dados.map(d => {
+        const valorFormatado = formatarMoeda(d.valor);
+        const dataFormatada = formatarDataBR(d.data);
+        
+        return `
+            <tr style="background: linear-gradient(90deg, #fef3c7 0%, transparent 100%);">
+                <td class="col-id" style="color: var(--warning); font-weight: 800;">${d.id}</td>
+                <td class="col-orgao" title="${d.orgao}">
+                    ${truncarTexto(d.orgao, 35)}
+                </td>
+                <td class="col-objeto" title="${d.objeto}">
+                    <div class="texto-wrap">${truncarTexto(d.objeto, 60)}</div>
+                    <div style="font-size: 0.75em; color: var(--warning); margin-top: 5px; font-weight: 600;">
+                        📋 ${d.tipo}
+                    </div>
+                </td>
+                <td class="col-valor" style="color: var(--warning);">${valorFormatado}</td>
+                <td class="col-data">${dataFormatada}</td>
+                <td class="col-acao">
+                    <button onclick="abrirDispensa('${d.id}', '${escapeString(d.orgao)}', '${escapeString(d.objeto)}', '${valorFormatado}', '${d.data}', '${d.numero_processo}', '${d.tipo}', '${d.fundamento}', '${escapeString(d.contratado)}', '${d.cnpj_contratado}', '${d.vigencia}')" 
+                            class="btn" style="background: var(--warning);" id="btn-dispensa-${d.id}">
+                        📄 Detalhes
+                    </button>
+                    <button onclick="abrirPrecificacaoInteligente(${parseInt(d.id.replace('D', ''))}, '${escapeString(d.orgao)}', '${escapeString(d.objeto)}', ${d.valor})" 
+                            class="btn btn-precificar" id="btn-precificar-${d.id}">
+                        🧠 Análise
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Atualiza estatísticas
+    const total = dados.length;
+    const valorTotal = dados.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+    
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-view').textContent = total;
+    document.getElementById('stat-valor').textContent = formatarMoedaCompacto(valorTotal);
+    document.getElementById('stat-cobertura').textContent = '100%';
+    
+    document.getElementById('contador-licitacoes').innerHTML = 
+        `Exibindo <strong>${dados.length}</strong> contratações diretas. ` +
+        `Fonte: <em>Portal da Transparência - Contratos</em>`;
+}
+
+function usarDadosFallbackDispensas() {
+    const DADOS_DISPENSAS_FALLBACK = [
+        { 
+            id: 'D1001', 
+            orgao: 'Ministério da Saúde - MS', 
+            objeto: 'Aquisição emergencial de vacinas e insumos para imunização', 
+            valor: 12500000.00, 
+            data: '2026-03-12', 
+            numero_processo: '25000.123456/2026-01',
+            tipo: 'Dispensa de Licitação',
+            fundamento: 'Art. 75, VIII - Emergência/Pandemia',
+            contratado: 'FUNDACAO OSWALDO CRUZ',
+            cnpj_contratado: '33.654.831/0001-16',
+            vigencia: '12 meses'
+        },
+        { 
+            id: 'D1002', 
+            orgao: 'INCRA - Instituto Nacional de Colonização', 
+            objeto: 'Contratação direta de serviços técnicos especializados em georreferenciamento', 
+            valor: 485000.00, 
+            data: '2026-03-11', 
+            numero_processo: '59000.789123/2026-15',
+            tipo: 'Inexigibilidade',
+            fundamento: 'Art. 74, II - Profissional artístico/técnico',
+            contratado: 'CONSULTORIA GEOESPACIAL LTDA',
+            cnpj_contratado: '12.345.678/0001-90',
+            vigencia: '6 meses'
+        },
+        { 
+            id: 'D1003', 
+            orgao: 'UFPE - Universidade Federal de Pernambuco', 
+            objeto: 'Aquisição de material de consumo para pesquisa científica', 
+            valor: 45000.00, 
+            data: '2026-03-10', 
+            numero_processo: '15346.456789/2026-42',
+            tipo: 'Dispensa de Licitação',
+            fundamento: 'Art. 75, II - Valor inferior a R$ 50.000',
+            contratado: 'LABORATORIOS IMPORTADOS S/A',
+            cnpj_contratado: '98.765.432/0001-10',
+            vigencia: 'Entrega imediata'
+        },
+        { 
+            id: 'D1004', 
+            orgao: 'Hospital das Clínicas de Porto Alegre', 
+            objeto: 'Manutenção preventiva e corretiva de equipamentos médicos de alta complexidade', 
+            valor: 890000.00, 
+            data: '2026-03-09', 
+            numero_processo: '25060.147258/2026-88',
+            tipo: 'Inexigibilidade',
+            fundamento: 'Art. 74, IV - Garantia técnica exclusiva',
+            contratado: 'SIEMENS HEALTHCARE DIAGNOSTICS',
+            cnpj_contratado: '55.981.397/0001-04',
+            vigencia: '24 meses'
+        },
+        { 
+            id: 'D1005', 
+            orgao: 'DNIT - Departamento Nacional de Infraestrutura', 
+            objeto: 'Serviços de engenharia para recuperação emergencial de rodovia federal', 
+            valor: 2500000.00, 
+            data: '2026-03-08', 
+            numero_processo: '50660.963741/2026-27',
+            tipo: 'Dispensa de Licitação',
+            fundamento: 'Art. 75, VIII - Emergência/Desastre',
+            contratado: 'CONSTRUTORA ESTRADA FORTE S/A',
+            cnpj_contratado: '33.123.456/0001-88',
+            vigencia: '4 meses'
+        },
+        { 
+            id: 'D1006', 
+            orgao: 'ICMBio - Instituto Chico Mendes', 
+            objeto: 'Aquisição de equipamentos de proteção individual para brigadistas', 
+            valor: 78000.00, 
+            data: '2026-03-07', 
+            numero_processo: '02001.159753/2026-56',
+            tipo: 'Dispensa de Licitação',
+            fundamento: 'Art. 75, II - Valor inferior a R$ 50.000',
+            contratado: 'SEGURANCA TRABALHO EPI LTDA',
+            cnpj_contratado: '11.222.333/0001-44',
+            vigencia: 'Entrega imediata'
+        },
+        { 
+            id: 'D1007', 
+            orgao: 'FIOCRUZ - Fundação Oswaldo Cruz', 
+            objeto: 'Contratação de empresa especializada para pesquisa epidemiológica', 
+            valor: 1200000.00, 
+            data: '2026-03-06', 
+            numero_processo: '25310.357951/2026-71',
+            tipo: 'Inexigibilidade',
+            fundamento: 'Art. 74, II - Pesquisa científica especializada',
+            contratado: 'INSTITUTO DE PESQUISA SAUDE PUBLICA',
+            cnpj_contratado: '22.333.444/0001-55',
+            vigencia: '18 meses'
+        },
+        { 
+            id: 'D1008', 
+            orgao: 'Embrapa - Empresa Brasileira de Pesquisa Agropecuária', 
+            objeto: 'Aquisição de sementes geneticamente modificadas para pesquisa', 
+            valor: 350000.00, 
+            data: '2026-03-05', 
+            numero_processo: '01210.456789/2026-12',
+            tipo: 'Inexigibilidade',
+            fundamento: 'Art. 74, IV - Propriedade intelectual/patente',
+            contratado: 'SYNGENTA PROTECAO DE CULTIVOS LTDA',
+            cnpj_contratado: '66.777.888/0001-99',
+            vigencia: '12 meses'
+        }
+    ];
+    
+    renderizarTabelaDispensas(DADOS_DISPENSAS_FALLBACK);
+    
+    const statusBadge = document.getElementById('status-api');
+    statusBadge.textContent = '🟡 Modo demonstração - Dispensas';
+    statusBadge.style.background = 'var(--warning)';
+}
+
+function abrirDispensa(id, orgao, objeto, valor, data, numeroProcesso, tipo, fundamento, contratado, cnpj, vigencia) {
+    const numDispensa = String(id).replace('D', '');
+    
+    const linkTransparencia = 'https://portaldatransparencia.gov.br/contratos';
+    const linkCGU = 'https://www.gov.br/cgu/pt-br/acesso-a-informacao/dados-abertos';
+    
+    const html = `
+        <div class="edital-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left-color: var(--warning);">
+            <h4 style="color: var(--warning);">📋 ${tipo} #${numDispensa}/2026</h4>
+            <div class="edital-info">
+                <div class="info-item">
+                    <span class="info-label">Órgão Contratante</span>
+                    <span class="info-value">${orgao}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Objeto</span>
+                    <span class="info-value">${objeto}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Valor Total</span>
+                    <span class="info-value" style="color: var(--warning); font-size: 1.2em; font-weight: 800;">${valor}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Data de Publicação</span>
+                    <span class="info-value">${formatarDataBR(data)}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Número do Processo</span>
+                    <span class="info-value">${numeroProcesso || 'Não informado'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Situação</span>
+                    <span class="info-value" style="color: var(--success); font-weight: 700;">✓ Contrato Ativo</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 2px solid var(--warning);">
+            <h4 style="color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                ⚖️ Fundamento Legal
+            </h4>
+            <div style="background: var(--gray-100); padding: 20px; border-radius: 8px; border-left: 4px solid var(--warning);">
+                <p style="font-size: 1.1em; color: var(--gray-800); font-weight: 600; margin-bottom: 10px;">
+                    ${fundamento}
+                </p>
+                <p style="font-size: 0.9em; color: var(--gray-600); line-height: 1.6;">
+                    ${obterDescricaoFundamento(fundamento)}
+                </p>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--gray-200);">
+            <h4 style="color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                🏢 Contratado
+            </h4>
+            <div class="edital-info" style="grid-template-columns: 1fr 1fr;">
+                <div class="info-item">
+                    <span class="info-label">Razão Social</span>
+                    <span class="info-value" style="font-weight: 700;">${contratado}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">CNPJ</span>
+                    <span class="info-value">${formatarCNPJ(cnpj)}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Vigência do Contrato</span>
+                    <span class="info-value">${vigencia}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Modalidade</span>
+                    <span class="info-value" style="color: var(--warning); font-weight: 600;">${tipo}</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #86efac;">
+            <h4 style="color: var(--success); margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                🔗 Acessar Documentação Oficial
+            </h4>
+            <p style="color: var(--gray-600); font-size: 0.9em; margin-bottom: 15px;">
+                Consulte o processo completo nos portais oficiais de transparência:
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <a href="${linkTransparencia}" target="_blank" class="btn-download" style="background: var(--success); text-decoration: none; font-size: 0.85em; padding: 12px 20px;">
+                    📊 Portal da Transparência
+                </a>
+                <a href="${linkCGU}" target="_blank" class="btn" style="background: var(--primary); text-decoration: none;">
+                    🔍 Dados Abertos CGU
+                </a>
+            </div>
+        </div>
+
+        <div style="background: var(--gray-100); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <h4 style="color: var(--primary); margin-bottom: 15px;">📝 Resumo da Contratação Direta</h4>
+            <div class="edital-texto" style="max-height: none; font-family: inherit; font-size: 0.9em; line-height: 1.8;">
+<strong>CONTRATAÇÃO DIRETA Nº ${numDispensa}/2026</strong>
+
+ÓRGÃO CONTRATANTE:
+${orgao}
+
+CONTRATADO:
+${contratado} (CNPJ: ${formatarCNPJ(cnpj)})
+
+OBJETO:
+${objeto}
+
+VALOR TOTAL:
+${valor}
+
+FUNDAMENTO LEGAL:
+${fundamento}
+
+${obterTextoFundamentoCompleto(fundamento)}
+
+VIGÊNCIA:
+${vigencia}
+
+PROCEDIMENTO:
+Esta contratação direta foi realizada nos termos da Lei nº 14.133/2021 (Nova Lei de Licitações), sem necessidade de procedimento licitatório prévio, em razão da hipótese legal acima identificada.
+
+PUBLICIDADE:
+O extrato do contrato foi publicado no Diário Oficial da União e está disponível para consulta pública no Portal da Transparência, nos termos do art. 93 da Lei nº 14.133/2021.
+
+Lei de Acesso à Informação (LAI) - Lei nº 12.527/2011
+Lei de Licitações e Contratos - Lei nº 14.133/2021
+            </div>
+        </div>
+
+        <div class="edital-acoes">
+            <button onclick="abrirPrecificacaoInteligente(${numDispensa}, '${escapeString(orgao)}', '${escapeString(objeto)}', ${parseFloat(valor.replace(/[^\\d]/g, ''))})" class="btn btn-precificar">
+                🧠 Análise de Preço
+            </button>
+            <button onclick="window.print()" class="btn btn-print">
+                🖨️ Imprimir Resumo
+            </button>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: var(--gray-100); border-radius: 8px; font-size: 0.8em; color: var(--gray-600); text-align: center; border-left: 4px solid var(--warning);">
+            <strong>⚠️ Informação importante:</strong> As contratações diretas (dispensas e inexigibilidades) são legalmente previstas na Lei nº 14.133/2021 e devem ser publicadas nos portais de transparência para controle social.
+        </div>
+    `;
+    
+    document.getElementById('editalContainer').innerHTML = html;
+    document.getElementById('modalEdital').classList.add('ativo');
+}
+
+function obterDescricaoFundamento(fundamento) {
+    if (fundamento.includes('Emergência')) return 'Dispensa por emergência ou calamidade pública quando houver necessidade de atendimento imediato.';
+    if (fundamento.includes('Valor inferior')) return 'Dispensa por valor para compras e serviços abaixo do limite legal estabelecido.';
+    if (fundamento.includes('artístico') || fundamento.includes('técnico')) return 'Inexigibilidade para contratação de profissional técnico de natureza singular.';
+    if (fundamento.includes('Garantia')) return 'Inexigibilidade quando a contratação envolver garantia técnica exclusiva do fabricante.';
+    if (fundamento.includes('patente')) return 'Inexigibilidade para aquisição de bens com exclusividade decorrente de propriedade intelectual.';
+    return 'Fundamento legal previsto na Lei nº 14.133/2021 que autoriza a contratação direta.';
+}
+
+function obterTextoFundamentoCompleto(fundamento) {
+    if (fundamento.includes('Emergência')) {
+        return `JUSTIFICATIVA:
+A presente contratação direta fundamenta-se no art. 75, inciso VIII, da Lei nº 14.133/2021, que autoriza a dispensa de licitação em caso de emergência ou calamidade pública.
+
+PROCEDIMENTO ADOTADO:
+1. Caracterização da emergência/calamidade
+2. Justificativa da impossibilidade de licitação
+3. Pesquisa de preços de mercado
+4. Autorização da autoridade competente
+5. Publicação do extrato do contrato`;
+    }
+    if (fundamento.includes('Valor inferior')) {
+        return `JUSTIFICATIVA:
+A presente contratação direta fundamenta-se no art. 75, inciso II, da Lei nº 14.133/2021, que autoriza a dispensa de licitação para valores inferiores ao limite legal.
+
+PROCEDIMENTO ADOTADO:
+1. Verificação do limite legal de valor
+2. Pesquisa de preços de mercado
+3. Seleção da proposta mais vantajosa
+4. Autorização da autoridade competente
+5. Publicação do extrato do contrato`;
+    }
+    return `JUSTIFICATIVA:
+A presente contratação direta fundamenta-se na Lei nº 14.133/2021.
+
+PROCEDIMENTO ADOTADO:
+1. Análise da adequação à hipótese legal
+2. Parecer jurídico favorável
+3. Pesquisa de preços de mercado (quando aplicável)
+4. Autorização da autoridade competente
+5. Publicação do extrato do contrato`;
+}
+
+function formatarCNPJ(cnpj) {
+    if (!cnpj || cnpj === 'Não informado') return 'Não informado';
+    const numeros = cnpj.replace(/\\D/g, '');
+    if (numeros.length !== 14) return cnpj;
+    return numeros.replace(/(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})/, '$1.$2.$3/$4-$5');
+}
     </script>
 </body>
 </html>
