@@ -9,7 +9,30 @@ import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-desenvolvimento')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data/usuarios.db'
+
+# ==========================================
+# CONFIGURAÇÃO DO BANCO DE DADOS
+# ==========================================
+
+# Usar DATABASE_URL se disponível (Render), senão SQLite local
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Render ou PostgreSQL
+    if database_url.startswith('postgres'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
+        print("🐘 Usando PostgreSQL")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        print(f"💾 Usando SQLite: {database_url}")
+else:
+    # Local - garantir que pasta data existe
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, 'usuarios.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print(f"💻 Local: {db_path}")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuração do Stripe
