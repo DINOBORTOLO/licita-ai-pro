@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - LICITA AI PRO</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .checkout-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #667eea;
+            font-size: 28px;
+        }
+        .plano-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        .plano-nome {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .plano-preco {
+            font-size: 32px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .plano-descricao {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .features-list {
+            list-style: none;
+        }
+        .features-list li {
+            padding: 5px 0;
+            color: #555;
+        }
+        .features-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+        }
+        .btn-pagar {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-pagar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .secure-badge {
+            text-align: center;
+            margin-top: 20px;
+            color: #28a745;
+            font-size: 14px;
+        }
+        .voltar {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .voltar a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        .flash {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .flash.error { background: #f8d7da; color: #721c24; }
+        .flash.success { background: #d4edda; color: #155724; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="checkout-container">
+        <div class="logo">
+            <h1>🚀 LICITA AI PRO</h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="plano-info">
+            <div class="plano-nome">{{ plano.nome }}</div>
+            <div class="plano-preco">R$ {{ "%.2f"|format(plano.preco) }}/mês</div>
+            <div class="plano-descricao">{{ plano.descricao }}</div>
+            <ul class="features-list">
+                {% for feature in plano.features %}
+                    <li>{{ feature }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="plano" value="{{ plano_id }}">
+            <button type="submit" class="btn-pagar">
+                💳 Pagar com Cartão (Stripe)
+            </button>
+        </form>
+
+        <div class="secure-badge">
+            🔒 Pagamento 100% seguro processado pelo Stripe
+        </div>
+
+        <div class="voltar">
+            <a href="{{ url_for('planos') }}">← Escolher outro plano</a>
+        </div>
+    </div>
+</body>
+</html>

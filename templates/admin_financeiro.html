@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro - LICITA AI PRO</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        .navbar h1 { font-size: 24px; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            opacity: 0.9;
+        }
+        .nav-links a:hover { opacity: 1; }
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+        tr:hover { background: #f8f9fa; }
+        .valor { 
+            color: #28a745; 
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .total-row {
+            background: #e8f5e9 !important;
+            font-weight: bold;
+        }
+        .plano-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .plano-gratuito { background: #e9ecef; color: #495057; }
+        .plano-basico { background: #cce5ff; color: #004085; }
+        .plano-profissional { background: #d4edda; color: #155724; }
+        .plano-empresarial { background: #f8d7da; color: #721c24; }
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🚀 LICITA AI PRO - Admin</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+            <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+            <a href="{{ url_for('admin_financeiro') }}">Financeiro</a>
+            <a href="{{ url_for('logout') }}">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid-2">
+            <div class="card">
+                <h2>📊 Receita por Mês</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mês</th>
+                            <th>Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total = namespace(value=0) %}
+                        {% for mes, valor in receita_por_mes %}
+                            {% set total.value = total.value + (valor or 0) %}
+                            <tr>
+                                <td>{{ mes }}</td>
+                                <td class="valor">R$ {{ "%.2f"|format(valor or 0) }}</td>
+                            </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td>Total</td>
+                            <td class="valor">R$ {{ "%.2f"|format(total.value) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>💎 Receita por Plano</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Plano</th>
+                            <th>Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_plano = namespace(value=0) %}
+                        {% for plano, valor in receita_por_plano.items() %}
+                            {% set total_plano.value = total_plano.value + (valor or 0) %}
+                            <tr>
+                                <td><span class="plano-badge plano-{{ plano }}">{{ planos[plano].nome if plano in planos else plano }}</span></td>
+                                <td class="valor">R$ {{ "%.2f"|format(valor or 0) }}</td>
+                            </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td>Total</td>
+                            <td class="valor">R$ {{ "%.2f"|format(total_plano.value) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Usuário - LICITA AI PRO</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        .navbar h1 { font-size: 24px; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            opacity: 0.9;
+        }
+        .nav-links a:hover { opacity: 1; }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 24px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn-secondary {
+            background: #6c757d;
+            margin-left: 10px;
+        }
+        .btn-secondary:hover { background: #5a6268; }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .user-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🚀 LICITA AI PRO - Admin</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+            <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+            <a href="{{ url_for('logout') }}">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>✏️ Editar Usuário #{{ usuario.id }}</h2>
+
+            <div class="user-info">
+                <p><strong>Email:</strong> {{ usuario.email }}</p>
+                <p><strong>Registrado em:</strong> {{ usuario.data_registro.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p><strong>Último acesso:</strong> {{ usuario.data_ultimo_acesso.strftime('%d/%m/%Y %H:%M') if usuario.data_ultimo_acesso else 'Nunca' }}</p>
+            </div>
+
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" value="{{ usuario.nome }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ usuario.email }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="empresa">Empresa</label>
+                        <input type="text" id="empresa" name="empresa" value="{{ usuario.empresa or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo">Tipo de Usuário</label>
+                        <select id="tipo" name="tipo">
+                            <option value="cliente" {% if usuario.tipo == 'cliente' %}selected{% endif %}>Cliente</option>
+                            <option value="admin" {% if usuario.tipo == 'admin' %}selected{% endif %}>Admin</option>
+                            <option value="superadmin" {% if usuario.tipo == 'superadmin' %}selected{% endif %}>Super Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="plano">Plano</label>
+                        <select id="plano" name="plano">
+                            {% for key, plano in planos.items() %}
+                                <option value="{{ key }}" {% if usuario.plano == key %}selected{% endif %}>{{ plano.nome }} - R$ {{ "%.2f"|format(plano.preco) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status_assinatura">Status da Assinatura</label>
+                        <select id="status_assinatura" name="status_assinatura">
+                            <option value="ativo" {% if usuario.status_assinatura == 'ativo' %}selected{% endif %}>Ativo</option>
+                            <option value="pendente" {% if usuario.status_assinatura == 'pendente' %}selected{% endif %}>Pendente</option>
+                            <option value="cancelado" {% if usuario.status_assinatura == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                            <option value="suspenso" {% if usuario.status_assinatura == 'suspenso' %}selected{% endif %}>Suspenso</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="limite_consultas">Limite de Consultas</label>
+                        <input type="number" id="limite_consultas" name="limite_consultas" value="{{ usuario.limite_consultas }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="data_expiracao">Data de Expiração</label>
+                        <input type="datetime-local" id="data_expiracao" name="data_expiracao" 
+                               value="{{ usuario.data_expiracao.strftime('%Y-%m-%dT%H:%M') if usuario.data_expiracao else '' }}">
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button type="submit" class="btn">💾 Salvar Alterações</button>
+                    <a href="{{ url_for('admin_usuarios') }}" class="btn btn-secondary">← Voltar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

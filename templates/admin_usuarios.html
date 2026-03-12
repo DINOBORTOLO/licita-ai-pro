@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Usuários - LICITA AI PRO</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        .navbar h1 { font-size: 24px; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            opacity: 0.9;
+        }
+        .nav-links a:hover { opacity: 1; }
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .filters form {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn-warning { background: #ffc107; color: #000; }
+        .btn-danger { background: #dc3545; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+        tr:hover { background: #f8f9fa; }
+        .plano-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .plano-gratuito { background: #e9ecef; color: #495057; }
+        .plano-basico { background: #cce5ff; color: #004085; }
+        .plano-profissional { background: #d4edda; color: #155724; }
+        .plano-empresarial { background: #f8d7da; color: #721c24; }
+        .status-ativo { color: #28a745; font-weight: bold; }
+        .status-pendente { color: #ffc107; font-weight: bold; }
+        .status-cancelado { color: #dc3545; font-weight: bold; }
+        .status-suspenso { color: #6c757d; font-weight: bold; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .page-link {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #667eea;
+        }
+        .page-link.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .actions { white-space: nowrap; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🚀 LICITA AI PRO - Admin</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+            <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+            <a href="{{ url_for('admin_financeiro') }}">Financeiro</a>
+            <a href="{{ url_for('logout') }}">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="filters">
+            <form method="GET" action="{{ url_for('admin_usuarios') }}">
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <input type="text" name="busca" value="{{ filtros.busca }}" placeholder="Nome, email ou empresa...">
+                </div>
+                <div class="filter-group">
+                    <label>Plano</label>
+                    <select name="plano">
+                        <option value="">Todos</option>
+                        {% for key, plano in planos.items() %}
+                            <option value="{{ key }}" {% if filtros.plano == key %}selected{% endif %}>{{ plano.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="">Todos</option>
+                        <option value="ativo" {% if filtros.status == 'ativo' %}selected{% endif %}>Ativo</option>
+                        <option value="pendente" {% if filtros.status == 'pendente' %}selected{% endif %}>Pendente</option>
+                        <option value="cancelado" {% if filtros.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                        <option value="suspenso" {% if filtros.status == 'suspenso' %}selected{% endif %}>Suspenso</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Filtrar</button>
+                <a href="{{ url_for('admin_usuarios') }}" class="btn" style="background: #6c757d;">Limpar</a>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">👥 Usuários Cadastrados</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Plano</th>
+                        <th>Status</th>
+                        <th>Data Registro</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios.items %}
+                        <tr>
+                            <td>{{ usuario.id }}</td>
+                            <td>{{ usuario.nome }}</td>
+                            <td>{{ usuario.email }}</td>
+                            <td><span class="plano-badge plano-{{ usuario.plano }}">{{ planos[usuario.plano].nome }}</span></td>
+                            <td class="status-{{ usuario.status_assinatura }}">{{ usuario.status_assinatura.title() }}</td>
+                            <td>{{ usuario.data_registro.strftime('%d/%m/%Y') }}</td>
+                            <td class="actions">
+                                <a href="{{ url_for('admin_editar_usuario', id=usuario.id) }}" class="btn btn-sm">Editar</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if usuarios.pages > 1 %}
+                <div class="pagination">
+                    {% if usuarios.has_prev %}
+                        <a href="{{ url_for('admin_usuarios', pagina=usuarios.prev_num, plano=filtros.plano, status=filtros.status, busca=filtros.busca) }}" class="page-link">← Anterior</a>
+                    {% endif %}
+
+                    {% for page_num in usuarios.iter_pages() %}
+                        {% if page_num %}
+                            <a href="{{ url_for('admin_usuarios', pagina=page_num, plano=filtros.plano, status=filtros.status, busca=filtros.busca) }}" class="page-link {% if page_num == usuarios.page %}active{% endif %}">{{ page_num }}</a>
+                        {% else %}
+                            <span>...</span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if usuarios.has_next %}
+                        <a href="{{ url_for('admin_usuarios', pagina=usuarios.next_num, plano=filtros.plano, status=filtros.status, busca=filtros.busca) }}" class="page-link">Próxima →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
