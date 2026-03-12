@@ -1,0 +1,48 @@
+2026-03-07 10:11:19,251 - __main__ - INFO - Iniciando importações...
+2026-03-07 10:11:19,251 - __main__ - INFO - Iniciando importações...
+2026-03-07 10:11:24,082 - __main__ - INFO - Diretório base: D:\robo_licitacoes_nacional
+2026-03-07 10:11:24,083 - __main__ - INFO - Banco de dados: D:\robo_licitacoes_nacional\banco.db
+2026-03-07 10:11:24,084 - __main__ - INFO - Arquivo existe: True
+2026-03-07 10:11:24,087 - __main__ - INFO - Diretório base: D:\robo_licitacoes_nacional
+2026-03-07 10:11:24,088 - __main__ - INFO - Banco de dados: D:\robo_licitacoes_nacional\banco.db
+2026-03-07 10:11:24,088 - __main__ - INFO - Arquivo existe: True
+2026-03-07 10:11:24,094 - __main__ - INFO - Inicializando banco de dados...
+2026-03-07 10:11:24,099 - __main__ - INFO - Inicializando banco de dados...
+2026-03-07 10:11:24,530 - werkzeug - WARNING -  * Debugger is active!
+2026-03-07 10:11:24,536 - werkzeug - INFO -  * Debugger PIN: 489-722-367
+2026-03-07 10:11:24,541 - werkzeug - WARNING -  * Debugger is active!
+2026-03-07 10:11:24,548 - werkzeug - INFO -  * Debugger PIN: 489-722-367
+2026-03-07 10:11:43,418 - __main__ - INFO - Iniciando importações...
+2026-03-07 10:11:44,122 - __main__ - INFO - Diretório base: D:\robo_licitacoes_nacional
+2026-03-07 10:11:44,122 - __main__ - INFO - Banco de dados: D:\robo_licitacoes_nacional\banco.db
+2026-03-07 10:11:44,122 - __main__ - INFO - Arquivo existe: True
+2026-03-07 10:11:44,127 - __main__ - INFO - Inicializando banco de dados...
+2026-03-07 10:11:44,183 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.12:5000
+2026-03-07 10:11:44,183 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-03-07 10:11:44,187 - werkzeug - INFO -  * Restarting with stat
+2026-03-07 10:11:44,556 - __main__ - INFO - Iniciando importações...
+2026-03-07 10:11:45,294 - __main__ - INFO - Diretório base: D:\robo_licitacoes_nacional
+2026-03-07 10:11:45,294 - __main__ - INFO - Banco de dados: D:\robo_licitacoes_nacional\banco.db
+2026-03-07 10:11:45,294 - __main__ - INFO - Arquivo existe: True
+2026-03-07 10:11:45,300 - __main__ - INFO - Inicializando banco de dados...
+2026-03-07 10:11:45,338 - werkzeug - WARNING -  * Debugger is active!
+2026-03-07 10:11:45,342 - werkzeug - INFO -  * Debugger PIN: 489-722-367
+2026-03-07 10:11:54,067 - __main__ - INFO - Acessando dashboard...
+2026-03-07 10:11:54,069 - __main__ - ERROR - Erro nas estatísticas: no such column: valor_estimado
+2026-03-07 10:11:54,072 - __main__ - ERROR - Erro ao buscar licitações: no such column: created_at
+2026-03-07 10:11:54,085 - __main__ - INFO - Dashboard carregado: 0 licitações
+2026-03-07 10:11:54,127 - __main__ - ERROR - ERRO no dashboard: 'stats' is undefined
+2026-03-07 10:11:54,182 - werkzeug - INFO - 127.0.0.1 - - [07/Mar/2026 10:11:54] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2026-03-07 10:11:54,414 - werkzeug - INFO - 127.0.0.1 - - [07/Mar/2026 10:11:54] "[35m[1mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 500 -
+2026-03-07 10:12:00,261 - __main__ - INFO - Acessando dashboard...
+2026-03-07 10:12:00,263 - __main__ - ERROR - Erro nas estatísticas: no such column: valor_estimado
+2026-03-07 10:12:00,264 - __main__ - ERROR - Erro ao buscar licitações: no such column: created_at
+2026-03-07 10:12:00,266 - __main__ - INFO - Dashboard carregado: 0 licitações
+2026-03-07 10:12:00,267 - __main__ - ERROR - ERRO no dashboard: 'stats' is undefined
+2026-03-07 10:12:00,276 - werkzeug - INFO - 127.0.0.1 - - [07/Mar/2026 10:12:00] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2026-03-07 10:12:00,573 - werkzeug - INFO - 127.0.0.1 - - [07/Mar/2026 10:12:00] "[35m[1mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 500 -
+2026-03-07 10:32:01,105 - werkzeug - INFO -  * Detected change in 'D:\\robo_licitacoes_nacional\\app.py', reloading
+2026-03-07 10:32:01,108 - werkzeug - INFO -  * Detected change in 'D:\\robo_licitacoes_nacional\\app.py', reloading

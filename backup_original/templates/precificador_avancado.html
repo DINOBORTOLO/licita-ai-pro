@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precificação Inteligente - Análise de Mercado</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        
+        .content { padding: 30px; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        
+        .card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .card h3 { color: #667eea; margin-bottom: 15px; font-size: 1.3em; }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .metric:last-child { border-bottom: none; }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        .price-highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .price-highlight .value {
+            font-size: 3em;
+            font-weight: bold;
+            display: block;
+            margin: 10px 0;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        
+        .simulator {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        .simulator h3 { margin-bottom: 20px; color: #ecf0f1; }
+        
+        .slider-container {
+            margin: 20px 0;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #34495e;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .cenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .cenario-card {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .cenario-card:hover { border-color: #667eea; }
+        
+        .cenario-card .margem { font-size: 1.5em; font-weight: bold; color: #667eea; }
+        .cenario-card .preco { font-size: 1.2em; margin: 10px 0; }
+        .cenario-card .prob { color: #2ecc71; font-weight: bold; }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .btn:hover { background: #764ba2; transform: translateY(-2px); }
+        .btn-success { background: #27ae60; }
+        .btn-warning { background: #f39c12; }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .alert-info { background: #d1ecf1; color: #0c5460; border-left: 5px solid #0c5460; }
+        .alert-success { background: #d4edda; color: #155724; border-left: 5px solid #155724; }
+        .alert-warning { background: #fff3cd; color: #856404; border-left: 5px solid #856404; }
+        
+        .confidence-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .confidence-high { background: #d4edda; color: #155724; }
+        .confidence-medium { background: #fff3cd; color: #856404; }
+        .confidence-low { background: #f8d7da; color: #721c24; }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .header h1 { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Precificação Inteligente</h1>
+            <p>Análise preditiva baseada em {{ analise.estatisticas.qtd_amostras }} licitações históricas</p>
+        </div>
+        
+        <div class="content">
+            <!-- Alerta de Confiança -->
+            <div class="alert alert-info">
+                Nível de confiança da análise: 
+                <span class="confidence-badge confidence-{{ 'high' if analise.estatisticas.confianca > 70 else 'medium' if analise.estatisticas.confianca > 40 else 'low' }}">
+                    {{ "%.0f"|format(analise.estatisticas.confianca) }}%
+                </span>
+                {% if analise.estatisticas.qtd_amostras < 5 %}
+                <br><small>⚠️ Poucos dados históricos. Considere ampliar a base de conhecimento.</small>
+                {% endif %}
+            </div>
+            
+            <div class="grid-2">
+                <!-- Card do Edital Atual -->
+                <div class="card">
+                    <h3>📋 Edital em Análise</h3>
+                    <div class="metric">
+                        <span>Objeto:</span>
+                        <span class="metric-value">{{ licitacao.objeto[:50] }}...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Órgão:</span>
+                        <span class="metric-value">{{ licitacao.orgao }}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Valor Estimado:</span>
+                        <span class="metric-value">R$ {{ "%.2f"|format(licitacao.valor_estimado) }}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Data Publicação:</span>
+                        <span class="metric-value">{{ licitacao.data_publicacao }}</span>
+                    </div>
+                </div>
+                
+                <!-- Card de Estatísticas -->
+                <div class="card">
+                    <h3>📊 Estatísticas de Mercado</h3>
+                    <div class="metric">
+                        <span>Preço Médio Vencedor:</span>
+                        <span class="metric-value">R$ {{ "%.2f"|format(analise.estatisticas.media_vencedor) }}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Desconto Médio:</span>
+                        <span class="metric-value">{{ "%.1f"|format(analise.estatisticas.desconto_medio) }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span>Faixa de Descontos:</span>
+                        <span class="metric-value">{{ "%.1f"|format(analise.estatisticas.desconto_min) }}% - {{ "%.1f"|format(analise.estatisticas.desconto_max) }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span>Desvio Padrão:</span>
+                        <span class="metric-value">R$ {{ "%.2f"|format(analise.estatisticas.desvio_padrao) }}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Risco da Operação:</span>
+                        <span class="metric-value" style="color: {{ '#27ae60' if analise.risco == 'BAIXO' else '#f39c12' if analise.risco == 'MÉDIO' else '#e74c3c' }}">
+                            {{ analise.risco }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preço Sugerido Destaque -->
+            <div class="price-highlight">
+                <div>💡 PREÇO SUGERIDO PARA VITÓRIA</div>
+                <span class="value">R$ {{ "%.2f"|format(analise.estatisticas.preco_sugerido) }}</span>
+                <div>Faixa Recomendada: R$ {{ "%.2f"|format(analise.estatisticas.faixa_recomendada_min) }} - R$ {{ "%.2f"|format(analise.estatisticas.faixa_recomendada_max) }}</div>
+                <small>Baseado na mediana histórica com fator de competitividade</small>
+            </div>
+            
+            <!-- Gráfico Comparativo -->
+            <div class="chart-container">
+                <h3>📈 Análise Visual do Mercado</h3>
+                {% if grafico %}
+                <img src="data:image/png;base64,{{ grafico }}" alt="Gráfico Comparativo de Preços">
+                {% else %}
+                <p>Sem dados suficientes para gerar gráfico.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Recomendação Estratégica -->
+            <div class="alert alert-success">
+                <h4>🎯 Recomendação Estratégica</h4>
+                <p>{{ analise.recomendacao|safe }}</p>
+            </div>
+            
+            <!-- Simulador Interativo -->
+            <div class="simulator">
+                <h3>🎮 Simulador de Cenários - "E se eu mudar o preço?"</h3>
+                <p>Ajuste a margem desejada e veja o impacto na probabilidade de vitória:</p>
+                
+                <div class="slider-container">
+                    <label for="margemSlider">Margem de Desconto: <span id="margemValor">20</span>%</label>
+                    <input type="range" id="margemSlider" min="5" max="40" value="20" step="1">
+                </div>
+                
+                <div id="resultadoSimulacao" style="margin-top: 20px; padding: 20px; background: #34495e; border-radius: 10px;">
+                    <div class="grid-3">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.9em; opacity: 0.8;">Preço de Oferta</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #667eea;" id="simPreco">R$ 0,00</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.9em; opacity: 0.8;">Prob. de Vitória</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #2ecc71;" id="simProb">0%</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.9em; opacity: 0.8;">Retorno Esperado</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #f39c12;" id="simRetorno">R$ 0,00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cenario-grid">
+                    {% for cenario in cenarios %}
+                    <div class="cenario-card" onclick="selecionarCenario({{ cenario.margem_desejada }})">
+                        <div class="margem">{{ cenario.margem_desejada }}%</div>
+                        <div class="preco">R$ {{ "%.2f"|format(cenario.preco_ofertado) }}</div>
+                        <div class="prob">{{ "%.0f"|format(cenario.probabilidade_vitoria) }}% chance</div>
+                        <small>Retorno: R$ {{ "%.2f"|format(cenario.retorno_esperado) }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Ações -->
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/relatorio-mercado/{{ licitacao.id }}" class="btn btn-success" download>
+                    📄 Baixar Relatório Completo
+                </a>
+                <a href="/dashboard" class="btn">← Voltar ao Dashboard</a>
+                <button onclick="registrarResultado()" class="btn btn-warning">
+                    📝 Registrar Resultado da Licitação
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const precoEdital = {{ licitacao.valor_estimado }};
+        const objeto = "{{ licitacao.objeto }}";
+        
+        // Simulação interativa
+        document.getElementById('margemSlider').addEventListener('input', function(e) {
+            const margem = parseFloat(e.target.value);
+            document.getElementById('margemValor').textContent = margem;
+            
+            const precoOferta = precoEdital * (1 - (margem / 100));
+            document.getElementById('simPreco').textContent = 'R$ ' + precoOferta.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            
+            // Chamar API para cálculo preciso
+            fetch('/api/simular-preco', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    preco_edital: precoEdital,
+                    margem: margem,
+                    objeto: objeto
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('simProb').textContent = data.probabilidade_vitoria.toFixed(1) + '%';
+                document.getElementById('simRetorno').textContent = 'R$ ' + data.retorno_esperado.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            });
+        });
+        
+        function selecionarCenario(margem) {
+            document.getElementById('margemSlider').value = margem;
+            document.getElementById('margemSlider').dispatchEvent(new Event('input'));
+        }
+        
+        function registrarResultado() {
+            // Abrir modal ou redirecionar para formulário de registro
+            window.location.href = '/registrar-resultado/{{ licitacao.id }}';
+        }
+        
+        // Inicializar
+        document.getElementById('margemSlider').dispatchEvent(new Event('input'));
+    </script>
+</body>
+</html>

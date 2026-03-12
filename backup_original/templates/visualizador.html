@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 {{ edital.objeto[:50] if edital.objeto else 'Edital' }} - Visualizador</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 20px;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .header h1 {
+            font-size: 1.1em;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .header p {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .btn-light {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .btn-light:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+            margin-top: 60px;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 20px;
+            flex-shrink: 0;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .card.success { border-left-color: #27ae60; }
+        .card.warning { border-left-color: #f39c12; }
+        .card.danger { border-left-color: #e74c3c; }
+        
+        .card h3 {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        .card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+        
+        .card .value.success { color: #27ae60; }
+        .card .value.warning { color: #f39c12; }
+        .card .value.danger { color: #e74c3c; }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .tag {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        
+        .content-area {
+            flex: 1;
+            background: white;
+            position: relative;
+        }
+        
+        .iframe-container {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .embed-error {
+            padding: 40px;
+            text-align: center;
+            color: #666;
+        }
+        
+        .embed-error h3 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40%;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-info">
+            <h1>📄 {{ edital.objeto[:60] if edital.objeto else 'Edital sem título' }}{% if edital.objeto and edital.objeto|length > 60 %}...{% endif %}</h1>
+            <p>{{ edital.orgao[:80] if edital.orgao else 'Órgão não informado' }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="/" class="btn btn-light">← Dashboard</a>
+            <a href="/precificar/{{ edital.id }}" class="btn btn-light">💰 Precificar</a>
+            <a href="{{ edital.link_original }}" target="_blank" class="btn btn-warning">🔗 Portal Oficial</a>
+        </div>
+    </header>
+    
+    <div class="container">
+        <aside class="sidebar">
+            <!-- Valor -->
+            <div class="card">
+                <h3>💰 Valor Estimado</h3>
+                <div class="value">R$ {{ "{:,.2f}".format(edital.valor or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+            </div>
+            
+            <!-- Análise IA -->
+            {% if analise %}
+            <div class="card {{ 'success' if analise.viabilidade > 70 else 'warning' if analise.viabilidade > 50 else 'danger' }}">
+                <h3>🤖 Viabilidade IA</h3>
+                <div class="value {{ 'success' if analise.viabilidade > 70 else 'warning' if analise.viabilidade > 50 else 'danger' }}">
+                    {{ "%.0f"|format(analise.viabilidade or 0) }}%
+                </div>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                    <strong>{{ analise.recomendacao or 'AVALIAR' }}</strong>
+                </p>
+            </div>
+            
+            <!-- Preço sugerido -->
+            <div class="card success">
+                <h3>💡 Preço Sugerido</h3>
+                <div class="value success" style="font-size: 1.5em;">
+                    R$ {{ "{:,.2f}".format(analise.preco_sugerido or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                </div>
+                <p style="margin-top: 5px; font-size: 0.85em; color: #666;">
+                    Margem: {{ analise.margem_recomendada or '25%' }} | 
+                    Chance: {{ analise.chance_vitoria or '50%' }}
+                </p>
+            </div>
+            
+            <!-- Riscos -->
+            {% if analise.riscos %}
+            <div class="card warning">
+                <h3>⚠️ Riscos ({{ analise.riscos|length }})</h3>
+                <div class="tag-list">
+                    {% for risco in analise.riscos[:5] %}
+                    <span class="tag">{{ risco }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Documentos -->
+            {% if analise.documentos %}
+            <div class="card">
+                <h3>📋 Documentos</h3>
+                <ul style="font-size: 0.85em; padding-left: 20px; line-height: 1.8;">
+                    {% for doc in analise.documentos[:5] %}
+                    <li>{{ doc }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% endif %}
+            
+            <!-- Info básica -->
+            <div class="card">
+                <h3>ℹ️ Detalhes</h3>
+                <div class="info-row">
+                    <span class="info-label">Modalidade</span>
+                    <span class="info-value">{{ edital.modalidade or 'N/A' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Situação</span>
+                    <span class="info-value">{{ edital.situacao or 'N/A' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Publicação</span>
+                    <span class="info-value">{{ edital.data_publicacao[:10] if edital.data_publicacao else '-' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Fonte</span>
+                    <span class="info-value">{{ edital.fonte or 'N/A' }}</span>
+                </div>
+                {% if edital.numero_controle %}
+                <div class="info-row">
+                    <span class="info-label">Nº Controle</span>
+                    <span class="info-value" style="font-size: 0.8em;">{{ edital.numero_controle }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+        
+        <!-- Área do iframe -->
+        <main class="content-area">
+            <iframe 
+                src="{{ url_embed }}" 
+                class="iframe-container"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                loading="lazy"
+                onload="this.style.opacity='1'; document.getElementById('loading').style.display='none';"
+                onerror="this.style.display='none'; document.getElementById('error-msg').style.display='block'; document.getElementById('loading').style.display='none';"
+                style="opacity: 0; transition: opacity 0.3s;"
+            ></iframe>
+            
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <p>Carregando edital do {{ edital.fonte or 'portal' }}...</p>
+                <p style="font-size: 0.85em; margin-top: 10px;">
+                    Se não carregar em 10s, use "Portal Oficial"
+                </p>
+            </div>
+            
+            <!-- Erro -->
+            <div id="error-msg" class="embed-error" style="display: none;">
+                <h3>⚠️ Não foi possível carregar automaticamente</h3>
+                <p>O portal pode estar bloqueando a exibição.</p>
+                <p>
+                    <a href="{{ edital.link_original }}" target="_blank" class="btn btn-primary" style="display: inline-block; margin-top: 15px; padding: 12px 24px; background: #3498db; color: white; text-decoration: none; border-radius: 6px;">
+                        Abrir no Portal Oficial →
+                    </a>
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

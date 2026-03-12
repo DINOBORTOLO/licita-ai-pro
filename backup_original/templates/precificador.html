@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>💰 Precificação - {{ licitacao.objeto[:50] if licitacao.objeto else 'Edital' }}</title>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .header h1 {
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .price-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .price-card h2 {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .price-card .price {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        
+        .stat-box h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-box .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+        
+        .cenarios {
+            margin-top: 40px;
+        }
+        
+        .cenarios h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+        }
+        
+        .cenario {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+        
+        .cenario.excelente { border-left-color: #27ae60; background: #e8f5e9; }
+        .cenario.bom { border-left-color: #3498db; background: #e3f2fd; }
+        .cenario.regular { border-left-color: #f39c12; background: #fff3e0; }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: #27ae60;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 30px;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            background: #3498db;
+            margin-left: 15px;
+        }
+        
+        .actions {
+            text-align: center;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Precificação Inteligente</h1>
+            <p>{{ edital.objeto if edital.objeto else 'Edital sem descrição' }}</p>
+        </div>
+        
+        <div class="price-card">
+            <h2>PREÇO SUGERIDO</h2>
+            <div class="price">
+                R$ {{ "{:,.2f}".format(sugestao.preco_sugerido).replace(",", "X").replace(".", ",").replace("X", ".") }}
+            </div>
+            <p>Margem: {{ sugestao.margem_estimada }}% | Chance de vitória: {{ sugestao.chance_vitoria }}</p>
+        </div>
+        
+        <div class="grid">
+            <div class="stat-box">
+                <h3>Valor Estimado</h3>
+                <div class="value">
+                    R$ {{ "{:,.0f}".format((edital.valor or 0)/1000) }}k
+                </div>
+            </div>
+            
+            <div class="stat-box">
+                <h3>Lucro Estimado</h3>
+                <div class="value" style="color: #27ae60;">
+                    R$ {{ "{:,.0f}".format(sugestao.lucro_estimado/1000) }}k
+                </div>
+            </div>
+            
+            <div class="stat-box">
+                <h3>Concorrentes</h3>
+                <div class="value">
+                    {{ sugestao.concorrentes_esperados }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="cenarios">
+            <h2>📊 Cenários de Preço</h2>
+            
+            {% for cenario in sugestao.cenarios %}
+            <div class="cenario {{ 'excelente' if cenario.recomendado else 'bom' }}">
+                <div>
+                    <strong>Desconto: {{ cenario.desconto_percentual }}</strong>
+                    <br>
+                    <small>Preço: R$ {{ "{:,.2f}".format(cenario.preco_proposta).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 1.3em; font-weight: bold;">
+                        {{ cenario.chance_vitoria_estimada }}
+                    </span>
+                    <br>
+                    <small>Lucro: R$ {{ "{:,.0f}".format(cenario.lucro_estimado/1000) }}k</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="actions">
+            <a href="/edital/{{ edital.id }}" class="btn">← Voltar ao Edital</a>
+            <a href="/" class="btn btn-secondary">Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

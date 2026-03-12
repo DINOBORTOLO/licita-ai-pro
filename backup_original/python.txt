@@ -1,0 +1,10 @@
+import sqlite3
+conn = sqlite3.connect(r"D:\robo_licitacoes_nacional\banco.db")
+cursor = conn.cursor()
+cursor.execute("ALTER TABLE licitacoes ADD COLUMN valor_fechamento REAL")
+cursor.execute("ALTER TABLE licitacoes ADD COLUMN vencedor TEXT")
+cursor.execute("ALTER TABLE licitacoes ADD COLUMN url_edital TEXT")
+conn.commit()
+conn.close()
+print("Pronto! Banco atualizado.")
+exit()

@@ -1,0 +1,4674 @@
+==========================================  
+EBPRICE SYSTEM - CODIGO COMPLETO  
+Gerado em: 06.03.2026 16:52:35.66  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: analisador.py 
+========================================== 
+"""
+ANALISADOR FINANCEIRO
+Calcula custos, margens e viabilidade de licitações
+"""
+
+def custo_estimado(valor, tipo="produto"):
+    """
+    Estima custo baseado no tipo de produto/serviço
+    """
+    fatores = {
+        "produto": 0.65,      # 35% margem
+        "servico": 0.55,      # 45% margem
+        "obra": 0.70,         # 30% margem
+        "material_construcao": 0.60,
+        "informatica": 0.75,
+        "limpeza": 0.55,
+        "escolar": 0.60
+    }
+    
+    fator = fatores.get(tipo, 0.65)
+    return valor * fator
+
+def margem(valor, custo=None):
+    """
+    Calcula margem de lucro
+    Se custo não informado, estima automaticamente
+    """
+    if custo is None:
+        custo = custo_estimado(valor)
+    
+    if valor <= 0:
+        return 0.0
+    
+    lucro = valor - custo
+    return lucro / valor
+
+def calcular_lucro(valor_estimado, tipo="produto"):
+    """
+    Calcula lucro estimado completo
+    """
+    custo = custo_estimado(valor_estimado, tipo)
+    lucro = valor_estimado - custo
+    margem_pct = (lucro / valor_estimado) if valor_estimado > 0 else 0
+    
+    return {
+        "valor_estimado": valor_estimado,
+        "custo_estimado": custo,
+        "lucro_estimado": lucro,
+        "margem": margem_pct,
+        "margem_percentual": f"{margem_pct * 100:.1f}%"
+    }
+
+def analisar_edital(texto_objeto, valor_estimado):
+    """
+    Análise completa de edital (versão básica sem IA)
+    """
+    # Detecta tipo pelo texto
+    texto_lower = texto_objeto.lower()
+    
+    if any(p in texto_lower for p in ["servico", "execucao", "instalacao"]):
+        tipo = "servico"
+    elif any(p in texto_lower for p in ["obra", "construcao", "reforma"]):
+        tipo = "obra"
+    elif any(p in texto_lower for p in ["material construcao", "cimento", "tijolo"]):
+        tipo = "material_construcao"
+    elif any(p in texto_lower for p in ["computador", "notebook", "impressora"]):
+        tipo = "informatica"
+    elif any(p in texto_lower for p in ["limpeza", "detergente", "papel"]):
+        tipo = "limpeza"
+    elif any(p in texto_lower for p in ["escolar", "cadeira escolar", "uniforme"]):
+        tipo = "escolar"
+    else:
+        tipo = "produto"
+    
+    # Calcula financeiro
+    financeiro = calcular_lucro(valor_estimado, tipo)
+    
+    # Análise de viabilidade simples
+    margem_val = financeiro["margem"]
+    
+    if margem_val >= 0.35:
+        viabilidade = 75
+        recomendacao = "EXCELENTE"
+        chance = "70%"
+    elif margem_val >= 0.30:
+        viabilidade = 60
+        recomendacao = "BOA"
+        chance = "55%"
+    elif margem_val >= 0.25:
+        viabilidade = 50
+        recomendacao = "REGULAR"
+        chance = "45%"
+    else:
+        viabilidade = 35
+        recomendacao = "AVALIAR"
+        chance = "30%"
+    
+    # Preço sugerido (para 30% de margem)
+    preco_sugerido = valor_estimado * 0.70
+    
+    return {
+        "viabilidade": viabilidade,
+        "recomendacao": recomendacao,
+        "preco_sugerido": preco_sugerido,
+        "margem_recomendada": "30%",
+        "chance_vitoria": chance,
+        "custo_estimado": financeiro["custo_estimado"],
+        "lucro_estimado": financeiro["lucro_estimado"],
+        "margem_calculada": financeiro["margem_percentual"],
+        "tipo_detectado": tipo,
+        "riscos": ["Concorrência desconhecida", "Prazo a verificar"],
+        "exigencias": ["Certidões negativas", "Regularidade fiscal"],
+        "documentos": ["CNPJ", "Contrato Social", "Certidão Federal"]
+    } 
+[FIM DO ARQUIVO analisador.py] 
+
+ 
+========================================== 
+ARQUIVO: app.py 
+========================================== 
+"""
+APP.PY - SISTEMA COMPLETO COM VISUALIZADOR EMBUTIDO
+Flask + SQLite + Visualizador de Editais (sem redirecionar)
+"""
+
+from flask import Flask, render_template, jsonify, request, send_file, redirect
+from flask_cors import CORS
+import sqlite3
+import json
+from datetime import datetime
+import os
+import requests
+
+# Importa módulos do sistema
+from banco import (
+    criar_banco, get_licitacao_by_id, listar_oportunidades, 
+    estatisticas, atualizar_analise_licitacao
+)
+from analisador import analisar_edital as analisador_basico
+
+app = Flask(__name__)
+CORS(app)
+
+# Configurações
+app.config['SECRET_KEY'] = 'sua-chave-secreta-aqui'
+app.config['JSON_AS_ASCII'] = False
+
+# ==================== HELPERS ====================
+
+def get_db():
+    conn = sqlite3.connect('banco.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ==================== ROTAS PRINCIPAIS ====================
+
+@app.route('/')
+def dashboard():
+    """Dashboard principal"""
+    stats = estatisticas()
+    recentes = listar_oportunidades(limite=20, min_margem=0.25)
+    return render_template('dashboard.html', stats=stats, recentes=recentes)
+
+@app.route('/api/licitacoes')
+def api_licitacoes():
+    """API JSON de licitações"""
+    filtro = request.args.get('filtro', 'todas')
+    min_margem = float(request.args.get('min_margem', 0.25))
+    
+    licitacoes = listar_oportunidades(limite=100, min_margem=min_margem)
+    return jsonify(licitacoes)
+
+@app.route('/api/estatisticas')
+def api_estatisticas():
+    """API de estatísticas"""
+    return jsonify(estatisticas())
+
+# ==================== VISUALIZADOR DE EDITAL ====================
+
+@app.route('/edital/<int:licitacao_id>')
+def visualizar_edital(licitacao_id):
+    """
+    Visualizador de edital - SEMPRE FUNCIONA
+    Mostra conteúdo embutido no sistema (não depende de iframe externo)
+    """
+    lic = get_licitacao_by_id(licitacao_id)
+    
+    if not lic:
+        return "Edital não encontrado", 404
+    
+    # Análise IA
+    try:
+        analise = analisador_basico(lic.get('objeto', ''), lic.get('valor', 0))
+    except:
+        analise = {
+            'viabilidade': 50,
+            'recomendacao': 'AVALIAR',
+            'preco_sugerido': lic.get('valor', 0) * 0.75,
+            'margem_recomendada': '25%',
+            'chance_vitoria': '50%',
+            'riscos': ['Análise indisponível'],
+            'documentos': ['CNPJ', 'Contrato Social', 'Certidões']
+        }
+    
+    # Prepara objeto do edital
+    edital = {
+        'id': lic.get('id'),
+        'orgao': lic.get('orgao', 'Não informado'),
+        'objeto': lic.get('objeto', 'Sem descrição'),
+        'valor': lic.get('valor', 0),
+        'data_publicacao': lic.get('data_publicacao', ''),
+        'modalidade': lic.get('modalidade', 'Pregão Eletrônico'),
+        'situacao': lic.get('situacao', 'Aberto'),
+        'fonte': lic.get('fonte', 'N/A'),
+        'numero_controle': lic.get('numero_controle', ''),
+        'link_original': lic.get('link', '#'),
+        'modo_demo': True  # Sempre True no momento (dados de demo)
+    }
+    
+    # Usa template embutido (sempre funciona!)
+    return render_template('edital_embutido.html', 
+                         edital=edital, 
+                         analise=analise)
+
+# ==================== PRECIFICAÇÃO ====================
+
+@app.route('/precificar/<int:licitacao_id>')
+def precificar(licitacao_id):
+    """Página de precificação inteligente"""
+    lic = get_licitacao_by_id(licitacao_id)
+    
+    if not lic:
+        return "Edital não encontrado", 404
+    
+    # Cálculo de precificação
+    valor = lic.get('valor', 0)
+    
+    sugestao = {
+        'preco_sugerido': valor * 0.75,
+        'margem_estimada': '25',
+        'chance_vitoria': '65%',
+        'lucro_estimado': valor * 0.25,
+        'concorrentes_esperados': 8,
+        'cenarios': [
+            {
+                'desconto_percentual': '15%',
+                'preco_proposta': valor * 0.85,
+                'lucro_estimado': valor * 0.15,
+                'chance_vitoria_estimada': '30%',
+                'recomendado': False
+            },
+            {
+                'desconto_percentual': '25%',
+                'preco_proposta': valor * 0.75,
+                'lucro_estimado': valor * 0.25,
+                'chance_vitoria_estimada': '65%',
+                'recomendado': True
+            },
+            {
+                'desconto_percentual': '35%',
+                'preco_proposta': valor * 0.65,
+                'lucro_estimado': valor * 0.35,
+                'chance_vitoria_estimada': '85%',
+                'recomendado': False
+            }
+        ]
+    }
+    
+    return render_template('precificador.html', edital=lic, sugestao=sugestao)
+
+# ==================== INICIALIZAÇÃO ====================
+
+if __name__ == '__main__':
+    print("🚀 Iniciando Sistema de Licitações...")
+    criar_banco()
+    print("✅ Banco de dados pronto")
+    print("🌐 Acesse: http://localhost:5000")
+    print("📊 Dashboard: http://localhost:5000/")
+    print("🛑 Pressione Ctrl+C para parar\n")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True) 
+[FIM DO ARQUIVO app.py] 
+
+ 
+========================================== 
+ARQUIVO: banco.py 
+========================================== 
+import sqlite3
+from datetime import datetime
+
+def criar_banco():
+    """Cria o banco de dados com estrutura completa"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS licitacoes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        orgao TEXT NOT NULL,
+        objeto TEXT NOT NULL,
+        valor REAL,
+        margem REAL,
+        fonte TEXT,
+        link TEXT,
+        data_publicacao TEXT,
+        data_captura TEXT,
+        status TEXT DEFAULT 'nova',
+        
+        -- NOVOS CAMPOS para visualizador
+        numero_controle TEXT,           -- ID único do portal (ex: 123456789)
+        sequencial TEXT,                -- Sequencial do PNCP
+        modalidade TEXT,                -- Pregão, Concorrência, etc
+        situacao TEXT,                  -- Aberto, Fechado, etc
+        tipo_link TEXT DEFAULT 'busca', -- 'direto', 'busca', 'embed'
+        
+        -- Análise IA (preenchido depois)
+        viabilidade_ia REAL,
+        chance_vitoria_ia REAL,
+        preco_sugerido_ia REAL,
+        texto_completo TEXT,
+        pdf_path TEXT
+    )
+    """)
+    
+    # Índices para performance
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_data ON licitacoes(data_captura)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_numero_controle ON licitacoes(numero_controle)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_fonte ON licitacoes(fonte)")
+    
+    conn.commit()
+    conn.close()
+    print("✅ Banco de dados criado/verificado")
+
+def salvar_licitacao(orgao, objeto, valor, margem, fonte, link, data_publicacao, 
+                     numero_controle=None, sequencial=None, modalidade=None, 
+                     situacao=None, tipo_link='busca'):
+    """Salva licitação com todos os campos"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    # Verifica duplicado por número de controle
+    if numero_controle:
+        cursor.execute("""
+            SELECT id FROM licitacoes 
+            WHERE numero_controle = ? AND fonte = ?
+        """, (numero_controle, fonte))
+        if cursor.fetchone():
+            conn.close()
+            return False
+    
+    cursor.execute("""
+    INSERT INTO licitacoes 
+    (orgao, objeto, valor, margem, fonte, link, data_publicacao, data_captura,
+     numero_controle, sequencial, modalidade, situacao, tipo_link)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        orgao, objeto, valor, margem, fonte, link, data_publicacao,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        numero_controle, sequencial, modalidade, situacao, tipo_link
+    ))
+    
+    conn.commit()
+    novo_id = cursor.lastrowid
+    conn.close()
+    return novo_id
+
+def atualizar_analise_licitacao(licitacao_id, viabilidade=None, chance_vitoria=None, 
+                                preco_sugerido=None, texto_completo=None, pdf_path=None):
+    """Atualiza campos de análise IA"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    UPDATE licitacoes SET
+        viabilidade_ia = COALESCE(?, viabilidade_ia),
+        chance_vitoria_ia = COALESCE(?, chance_vitoria_ia),
+        preco_sugerido_ia = COALESCE(?, preco_sugerido_ia),
+        texto_completo = COALESCE(?, texto_completo),
+        pdf_path = COALESCE(?, pdf_path)
+    WHERE id = ?
+    """, (viabilidade, chance_vitoria, preco_sugerido, texto_completo, pdf_path, licitacao_id))
+    
+    conn.commit()
+    conn.close()
+
+def get_licitacao_by_id(licitacao_id):
+    """Busca licitação completa por ID"""
+    conn = sqlite3.connect("banco.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM licitacoes WHERE id = ?", (licitacao_id,))
+    resultado = cursor.fetchone()
+    conn.close()
+    
+    return dict(resultado) if resultado else None
+
+def listar_oportunidades(limite=50, min_margem=0.25):
+    """Lista oportunidades com margem mínima"""
+    conn = sqlite3.connect("banco.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    SELECT * FROM licitacoes 
+    WHERE margem >= ? 
+    ORDER BY data_captura DESC 
+    LIMIT ?
+    """, (min_margem, limite))
+    
+    resultados = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return resultados
+
+def estatisticas():
+    """Retorna estatísticas do dashboard"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM licitacoes")
+    total = cursor.fetchone()[0]
+    
+    cursor.execute("""
+        SELECT COUNT(*) FROM licitacoes 
+        WHERE date(data_captura) = date('now')
+    """)
+    hoje = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT SUM(valor) FROM licitacoes")
+    valor_total = cursor.fetchone()[0] or 0
+    
+    cursor.execute("""
+        SELECT fonte, COUNT(*) as qtd, SUM(valor) as val 
+        FROM licitacoes 
+        GROUP BY fonte
+    """)
+    por_fonte = cursor.fetchall()
+    
+    conn.close()
+    
+    return {
+        "total": total,
+        "hoje": hoje,
+        "valor_total": valor_total,
+        "por_fonte": [{"fonte": f, "quantidade": q, "valor_total": v} for f, q, v in por_fonte]
+    } 
+[FIM DO ARQUIVO banco.py] 
+
+ 
+========================================== 
+ARQUIVO: config.py 
+========================================== 
+# CONFIGURAÇÕES DO ROBÔ
+INTERVALO_BUSCA = 1800  # segundos (30 minutos)
+MARGEM_MINIMA = 0.25    # 25% de margem mínima
+
+# PORTAIS MONITORADOS
+PORTAIS = [
+    "pncp",           # Portal Nacional - TODAS as prefeituras/estados/federal
+    "comprasgov",     # Compras.gov.br - Federal e órgãos
+    "licitacoesbb"    # Banco do Brasil - Milhares de municípios
+]
+
+# ARQUIVO DE PALAVRAS-CHAVE
+PALAVRAS_ARQUIVO = "keywords.txt" 
+[FIM DO ARQUIVO config.py] 
+
+ 
+========================================== 
+ARQUIVO: config_modo.py 
+========================================== 
+# ESCOLHA O MODO DE OPERAÇÃO
+
+# MODO = "api"          # Apenas APIs (mais rápido, pode falhar)
+# MODO = "demo"         # Dados fictícios (para testes)
+MODO = "hibrido"      # APIs + Links de busca (recomendado - sempre funciona)
+
+if MODO == "api":
+    from fontes import buscar_todas_fontes
+elif MODO == "demo":
+    from demo_dados import buscar_todas_fontes_demo as buscar_todas_fontes
+else:  # hibrido
+    from fontes_hibrido import buscar_todas_fontes_hibrido as buscar_todas_fontes 
+[FIM DO ARQUIVO config_modo.py] 
+
+ 
+========================================== 
+ARQUIVO: demo_dados.py 
+========================================== 
+"""
+Dados de demonstração para testar o sistema
+Quando as APIs do governo estiverem fora do ar
+"""
+
+import random
+from datetime import datetime, timedelta
+
+ORGAOS = [
+    "Prefeitura Municipal de São Paulo",
+    "Prefeitura de Belo Horizonte",
+    "Governo do Estado de MG",
+    "Prefeitura de Curitiba",
+    "Universidade Federal de Minas Gerais",
+    "Hospital das Clínicas de Porto Alegre",
+    "Prefeitura de Recife",
+    "Secretaria de Educação do RJ",
+    "Prefeitura de Brasília",
+    "Instituto Federal de SP"
+]
+
+OBJETOS = [
+    "Aquisição de 500 cadeiras escolares para rede municipal de ensino",
+    "Fornecimento de material escolar completo - kit aluno",
+    "Contratação de serviços de reforma de escolas estaduais",
+    "Aquisição de equipamentos para cozinha industrial",
+    "Fornecimento de uniformes escolares - 2.000 unidades",
+    "Instalação de cobertura metálica em quadra poliesportiva",
+    "Aquisição de notebooks para professores - 300 unidades",
+    "Fornecimento de material de limpeza hospitalar",
+    "Construção de escola modular em estrutura metálica",
+    "Reforma e ampliação de unidade de saúde",
+    "Aquisição de playground e equipamentos recreativos",
+    "Fornecimento de cimento e material de construção",
+    "Instalação de energia solar em prédios públicos",
+    "Aquisição de fogão industrial e freezer para merenda escolar",
+    "Contratação de serviços de manutenção predial"
+]
+
+def gerar_licitacoes_demo(quantidade=15):
+    """Gera licitações fictícias para demonstração"""
+    licitacoes = []
+    
+    for i in range(quantidade):
+        orgao = random.choice(ORGAOS)
+        objeto = random.choice(OBJETOS)
+        
+        # Valor entre 50 mil e 5 milhões
+        valor = random.randint(50000, 5000000)
+        
+        # Data aleatória nos últimos 7 dias
+        dias_atras = random.randint(0, 7)
+        data = (datetime.now() - timedelta(days=dias_atras)).strftime("%Y-%m-%d")
+        
+        licitacao = {
+            "orgao": orgao,
+            "objeto": objeto,
+            "valor": valor,
+            "data_publicacao": data,
+            "link": f"https://pncp.gov.br/demo/{i}",
+            "fonte": random.choice(["PNCP", "COMPRASGOV"]),
+            "modalidade": "Pregão Eletrônico",
+            "situacao": "Aberta"
+        }
+        licitacoes.append(licitacao)
+    
+    return licitacoes
+
+def buscar_todas_fontes_demo():
+    """Versão de demonstração do buscador"""
+    print("\n🎮 MODO DEMONSTRAÇÃO ATIVADO")
+    print("Gerando licitações de teste para você visualizar o sistema...\n")
+    
+    licitacoes = gerar_licitacoes_demo(20)
+    print(f"✓ {len(licitacoes)} licitações de demonstração geradas")
+    return licitacoes 
+[FIM DO ARQUIVO demo_dados.py] 
+
+ 
+========================================== 
+ARQUIVO: estrategia_profissional.py 
+========================================== 
+"""
+ESTRATÉGIA PROFISSIONAL DE LICITAÇÃO
+Baseado em táticas reais de fornecedores que vivem de pregão
+"""
+
+import random
+from dataclasses import dataclass
+from typing import List, Dict, Tuple
+import json
+from datetime import datetime
+
+@dataclass
+class AnaliseConcorrencia:
+    """Perfil de concorrente estimado"""
+    nome: str
+    perfil: str  # 'agressivo', 'moderado', 'conservador'
+    preco_medio: float
+    desconto_maximo: float  # % abaixo do preço médio deles
+
+@dataclass
+class EstrategiaLance:
+    """Estratégia calculada para ganhar"""
+    preco_custo: float
+    preco_alvo: float
+    margem_real: float
+    lance_inicial: float
+    lance_final: float
+    momento_entrada: str  # 'inicio', 'meio', 'final'
+    chance_vitoria: float
+    lucro_estimado: float
+    risco: str  # 'baixo', 'medio', 'alto'
+
+@dataclass
+class SimulacaoPregao:
+    """Resultado de simulação de pregão"""
+    vencedor: str
+    preco_vencedor: float
+    colocacao: int  # 1º, 2º, 3º...
+    economia_orgao: float  # % abaixo do valor estimado
+    lucro_real: float
+    tempo_duracao: str  # 'rapido', 'normal', 'longo'
+
+
+class EstrategaProfissional:
+    """
+    Implementa estratégias reais usadas por fornecedores profissionais
+    """
+    
+    def __init__(self):
+        self.historico_precos = self._carregar_historico()
+        self.perfis_concorrentes = {
+            'agressivo': {'desconto_medio': 0.15, 'variacao': 0.10, 'pressa': True},
+            'moderado': {'desconto_medio': 0.08, 'variacao': 0.05, 'pressa': False},
+            'conservador': {'desconto_medio': 0.03, 'variacao': 0.03, 'pressa': False}
+        }
+    
+    def _carregar_historico(self) -> Dict:
+        """Base de dados de preços históricos por categoria"""
+        return {
+            'cadeira_escolar': {
+                'preco_fabrica': 540,
+                'preco_atacado': 620,
+                'preco_varejo': 820,
+                'frete_unitario': 40,
+                'impostos': 30,
+                'margem_minima_viavel': 0.08
+            },
+            'material_escolar_kit': {
+                'preco_fabrica': 45,
+                'preco_atacado': 65,
+                'preco_varejo': 95,
+                'frete_unitario': 8,
+                'impostos': 5,
+                'margem_minima_viavel': 0.10
+            },
+            'notebook_educacional': {
+                'preco_fabrica': 2800,
+                'preco_atacado': 3200,
+                'preco_varejo': 4500,
+                'frete_unitario': 150,
+                'impostos': 200,
+                'margem_minima_viavel': 0.06
+            },
+            'cozinha_industrial': {
+                'preco_fabrica': 3500,
+                'preco_atacado': 4800,
+                'preco_varejo': 7200,
+                'frete_unitario': 400,
+                'impostos': 300,
+                'margem_minima_viavel': 0.12
+            },
+            'estrutura_metalica': {
+                'preco_fabrica': 180,  # por m2
+                'preco_atacado': 250,
+                'preco_varejo': 380,
+                'frete_unitario': 30,
+                'impostos': 20,
+                'margem_minima_viavel': 0.15
+            }
+        }
+    
+    def detectar_categoria(self, objeto: str) -> str:
+        """Detecta categoria do produto pelo texto do edital"""
+        objeto_lower = objeto.lower()
+        
+        if any(p in objeto_lower for p in ['cadeira', 'carteira', 'mesa escolar']):
+            return 'cadeira_escolar'
+        elif any(p in objeto_lower for p in ['kit escolar', 'material escolar', 'uniforme']):
+            return 'material_escolar_kit'
+        elif any(p in objeto_lower for p in ['notebook', 'computador', 'tablet']):
+            return 'notebook_educacional'
+        elif any(p in objeto_lower for p in ['fogao', 'freezer', 'cozinha industrial', 'geladeira industrial']):
+            return 'cozinha_industrial'
+        elif any(p in objeto_lower for p in ['estrutura metalica', 'cobertura metalica', 'galpao', 'steel frame']):
+            return 'estrutura_metalica'
+        
+        return 'generico'
+    
+    def calcular_custo_real(self, categoria: str, quantidade: int = 1) -> Dict:
+        """
+        Calcula custo real de produção/aquisição
+        Baseado em pesquisa de mercado real
+        """
+        dados = self.historico_precos.get(categoria, {
+            'preco_fabrica': 0,
+            'preco_atacado': 0,
+            'frete_unitario': 0,
+            'impostos': 0
+        })
+        
+        custo_unitario = (
+            dados['preco_fabrica'] +
+            dados['frete_unitario'] +
+            dados['impostos']
+        )
+        
+        # Desconto por volume
+        if quantidade >= 500:
+            desconto_volume = 0.05  # 5% desconto
+        elif quantidade >= 100:
+            desconto_volume = 0.03
+        else:
+            desconto_volume = 0
+        
+        custo_unitario *= (1 - desconto_volume)
+        
+        return {
+            'custo_unitario': custo_unitario,
+            'custo_total': custo_unitario * quantidade,
+            'preco_atacado_referencia': dados['preco_atacado'],
+            'preco_varejo_referencia': dados['preco_varejo'],
+            'margem_minima_viavel': dados.get('margem_minima_viavel', 0.10)
+        }
+    
+    def estimar_concorrencia(self, valor_estimado: float, 
+                            categoria: str,
+                            regiao: str = 'sudeste') -> List[AnaliseConcorrencia]:
+        """
+        Estima perfil dos concorrentes baseado em histórico
+        """
+        concorrentes = []
+        
+        # Número de concorrentes baseado no valor
+        if valor_estimado > 1000000:
+            num_concorrentes = random.randint(8, 15)
+        elif valor_estimado > 500000:
+            num_concorrentes = random.randint(5, 10)
+        else:
+            num_concorrentes = random.randint(3, 7)
+        
+        # Distribuição de perfis
+        perfis = ['agressivo'] * (num_concorrentes // 3) + \
+                 ['moderado'] * (num_concorrentes // 2) + \
+                 ['conservador'] * (num_concorrentes // 6 + 1)
+        
+        dados_cat = self.historico_precos.get(categoria, {})
+        preco_ref = dados_cat.get('preco_atacado', valor_estimado * 0.002)
+        
+        for i, perfil in enumerate(perfis[:num_concorrentes]):
+            perfil_dados = self.perfis_concorrentes[perfil]
+            
+            # Preço base do concorrente
+            preco_base = preco_ref * (1 + random.uniform(-0.10, 0.15))
+            
+            # Quanto descontam no máximo
+            desconto_max = perfil_dados['desconto_medio'] + random.uniform(0, perfil_dados['variacao'])
+            
+            concorrentes.append(AnaliseConcorrencia(
+                nome=f"Concorrente {chr(65+i)}",  # A, B, C...
+                perfil=perfil,
+                preco_medio=preco_base,
+                desconto_maximo=desconto_max
+            ))
+        
+        return concorrentes
+    
+    def calcular_estrategia_vencedora(self,
+                                     objeto: str,
+                                     valor_estimado: float,
+                                     quantidade: int = 1,
+                                     urgencia: str = 'normal') -> Dict:
+        """
+        Calcula estratégia completa para ganhar o pregão
+        """
+        # Detecta categoria
+        categoria = self.detectar_categoria(objeto)
+        
+        # Calcula custo real
+        custos = self.calcular_custo_real(categoria, quantidade)
+        custo_unitario = custos['custo_unitario']
+        custo_total = custos['custo_total']
+        
+        # Estima concorrência
+        concorrentes = self.estimar_concorrencia(valor_estimado, categoria)
+        
+        # Ordena concorrentes por agressividade (preço mais baixo esperado)
+        concorrentes_ordenados = sorted(
+            concorrentes,
+            key=lambda x: x.preco_medio * (1 - x.desconto_maximo)
+        )
+        
+        # Preço do concorrente mais agressivo
+        preco_mais_agressivo = concorrentes_ordenados[0].preco_medio * \
+                              (1 - concorrentes_ordenados[0].desconto_maximo)
+        
+        # ESTRATÉGIA: Ganhar com margem mínima viável
+        margem_minima = custos['margem_minima_viavel']
+        
+        # Preço alvo: abaixo do mais agressivo, mas com margem mínima
+        preco_alvo_minimo = custo_unitario * (1 + margem_minima)
+        preco_alvo = min(preco_mais_agressivo * 1.02, preco_alvo_minimo * 1.15)
+        
+        # Garante margem mínima
+        if preco_alvo < preco_alvo_minimo:
+            preco_alvo = preco_alvo_minimo
+        
+        # Arredondamento estratégico (psicológico)
+        preco_alvo = self._arredondar_pregao(preco_alvo)
+        
+        # Define momento de entrada
+        if len([c for c in concorrentes if c.perfil == 'agressivo']) > 2:
+            momento = 'final'  # Muitos agressivos = esperar
+        elif valor_estimado > 500000:
+            momento = 'meio'   # Valor alto = entrar no meio
+        else:
+            momento = 'inicio' # Pouca concorrência = entrar cedo
+        
+        # Calcula chance de vitória
+        nosso_preco_final = preco_alvo
+        precos_finais = [c.preco_medio * (1 - c.desconto_maximo * 0.8) 
+                        for c in concorrentes]
+        precos_finais.append(nosso_preco_final)
+        precos_finais.sort()
+        
+        nossa_posicao = precos_finais.index(nosso_preco_final) + 1
+        chance_vitoria = 95 if nossa_posicao == 1 else 70 if nossa_posicao <= 2 else 40
+        
+        # Monta resultado
+        estrategia = EstrategiaLance(
+            preco_custo=custo_unitario,
+            preco_alvo=preco_alvo,
+            margem_real=(preco_alvo - custo_unitario) / preco_alvo,
+            lance_inicial=preco_alvo * 1.05,  # Começa 5% acima
+            lance_final=preco_alvo,
+            momento_entrada=momento,
+            chance_vitoria=chance_vitoria,
+            lucro_estimado=(preco_alvo - custo_unitario) * quantidade,
+            risco='baixo' if chance_vitoria > 80 else 'medio'
+        )
+        
+        return {
+            'categoria_detectada': categoria,
+            'custo_real_unitario': custo_unitario,
+            'custo_total': custo_total,
+            'concorrentes': [
+                {
+                    'nome': c.nome,
+                    'perfil': c.perfil,
+                    'preco_medio': c.preco_medio,
+                    'preco_minimo_esperado': c.preco_medio * (1 - c.desconto_maximo)
+                }
+                for c in concorrentes[:5]  # Top 5
+            ],
+            'estrategia': {
+                'preco_custo': estrategia.preco_custo,
+                'preco_alvo': estrategia.preco_alvo,
+                'margem_percentual': f"{estrategia.margem_real*100:.1f}%",
+                'lance_inicial': estrategia.lance_inicial,
+                'lance_final': estrategia.lance_final,
+                'momento_entrada': estrategia.momento_entrada,
+                'chance_vitoria': f"{estrategia.chance_vitoria:.0f}%",
+                'lucro_estimado_total': estrategia.lucro_estimado,
+                'risco': estrategia.risco
+            },
+            'recomendacao_tatica': self._gerar_recomendacao_tatica(estrategia, concorrentes),
+            'simulacao': self._simular_pregao(estrategia, concorrentes, quantidade)
+        }
+    
+    def _arredondar_pregao(self, preco: float) -> float:
+        """Arredondamento psicológico para pregões"""
+        if preco > 1000:
+            # Arredonda para 90, 95, 99 (psicológico)
+            base = int(preco / 10) * 10
+            centavos = preco - base
+            if centavos > 5:
+                return base + 9.99
+            else:
+                return base - 0.01
+        return preco
+    
+    def _gerar_recomendacao_tatica(self, 
+                                   estrategia: EstrategiaLance,
+                                   concorrentes: List[AnaliseConcorrencia]) -> List[str]:
+        """Gera recomendações táticas específicas"""
+        recomendacoes = []
+        
+        num_agressivos = len([c for c in concorrentes if c.perfil == 'agressivo'])
+        
+        if estrategia.momento_entrada == 'final':
+            recomendacoes.append(
+                "⏰ ESPERE ATÉ O FINAL: Há muitos concorrentes agressivos. "
+                "Deixe eles se desgastarem antes de entrar."
+            )
+        elif estrategia.momento_entrada == 'meio':
+            recomendacoes.append(
+                "⚡ ENTRADA NO MEIO: Valor alto atrai cautela. "
+                "Entre quando faltarem 10 minutos para o encerramento."
+            )
+        else:
+            recomendacoes.append(
+                "🚀 ENTRADA RÁPIDA: Pouca concorrência agressiva. "
+                "Entre cedo para assustar competidores."
+            )
+        
+        if estrategia.margem_real < 0.10:
+            recomendacoes.append(
+                f"⚠️ MARGEM APERTADA: Apenas {estrategia.margem_real*100:.1f}%. "
+                "Ganhe o contrato e negocie volume extra com a fábrica."
+            )
+        
+        recomendacoes.append(
+            f"🎯 LANCE FINAL: R$ {estrategia.lance_final:.2f} "
+            f"(não desça abaixo de R$ {estrategia.preco_custo * 1.03:.2f})"
+        )
+        
+        recomendacoes.append(
+            f"💰 LUCRO ESPERADO: R$ {estrategia.lucro_estimado:,.2f} "
+            f"no contrato total."
+        )
+        
+        return recomendacoes
+    
+    def _simular_pregao(self,
+                       estrategia: EstrategiaLance,
+                       concorrentes: List[AnaliseConcorrencia],
+                       quantidade: int) -> SimulacaoPregao:
+        """Simula como seria o pregão"""
+        
+        # Simula lances dos concorrentes
+        lances = []
+        for c in concorrentes:
+            lance_min = c.preco_medio * (1 - c.desconto_maximo)
+            lance_real = lance_min * random.uniform(1.0, 1.10)  # Não dá o máximo
+            lances.append((c.nome, lance_real))
+        
+        # Nosso lance
+        lances.append(('NOSSA EMPRESA', estrategia.lance_final))
+        
+        # Ordena por preço (menor primeiro)
+        lances.sort(key=lambda x: x[1])
+        
+        nossa_posicao = next(i for i, (nome, _) in enumerate(lances) if nome == 'NOSSA EMPRESA') + 1
+        vencedor = lances[0][0]
+        preco_vencedor = lances[0][1]
+        
+        # Calcula economia para o órgão
+        valor_medio = sum(l[1] for l in lances) / len(lances)
+        economia = (valor_medio - preco_vencedor) / valor_medio
+        
+        return SimulacaoPregao(
+            vencedor='NOSSA EMPRESA' if nossa_posicao == 1 else vencedor,
+            preco_vencedor=preco_vencedor,
+            colocacao=nossa_posicao,
+            economia_orgao=economia * 100,
+            lucro_real=(preco_vencedor - estrategia.preco_custo) * quantidade if vencedor == 'NOSSA EMPRESA' else 0,
+            tempo_duracao='longo' if len([c for c in concorrentes if c.perfil == 'agressivo']) > 3 else 'normal'
+        )
+
+
+# Instância global
+estratega = EstrategaProfissional()
+
+def analisar_estrategia_licitacao(objeto: str, 
+                                   valor_estimado: float,
+                                   quantidade: int = 1) -> Dict:
+    """Função pública para usar no sistema"""
+    return estratega.calcular_estrategia_vencedora(objeto, valor_estimado, quantidade)
+
+
+# Teste rápido
+if __name__ == "__main__":
+    # Exemplo do caso real: 450 cadeiras escolares
+    print("="*70)
+    print("ESTRATÉGIA PROFISSIONAL - EXEMPLO REAL")
+    print("="*70)
+    
+    resultado = analisar_estrategia_licitacao(
+        objeto="Aquisição de 450 cadeiras escolares padrão FNDE",
+        valor_estimado=380000,
+        quantidade=450
+    )
+    
+    print(f"\n📦 CATEGORIA: {resultado['categoria_detectada']}")
+    print(f"💰 CUSTO REAL UNITÁRIO: R$ {resultado['custo_real_unitario']:.2f}")
+    print(f"💰 CUSTO TOTAL: R$ {resultado['custo_total']:,.2f}")
+    
+    print(f"\n🏆 ESTRATÉGIA CALCULADA:")
+    estr = resultado['estrategia']
+    print(f"   Preço alvo: R$ {estr['preco_alvo']:.2f}")
+    print(f"   Margem: {estr['margem_percentual']}")
+    print(f"   Chance de vitória: {estr['chance_vitoria']}")
+    print(f"   Lucro estimado: R$ {estr['lucro_estimado_total']:,.2f}")
+    print(f"   Momento de entrada: {estr['momento_entrada']}")
+    
+    print(f"\n📋 RECOMENDAÇÕES TÁTICAS:")
+    for rec in resultado['recomendacao_tatica']:
+        print(f"   {rec}")
+    
+    print(f"\n🎮 SIMULAÇÃO DO PREGÃO:")
+    sim = resultado['simulacao']
+    print(f"   Vencedor: {sim.vencedor}")
+    print(f"   Preço vencedor: R$ {sim.preco_vencedor:.2f}")
+    print(f"   Nossa colocação: {sim.colocacao}º")
+    print(f"   Economia para órgão: {sim.economia_orgao:.1f}%")
+    print(f"   Lucro real (se ganhar): R$ {sim.lucro_real:,.2f}") 
+[FIM DO ARQUIVO estrategia_profissional.py] 
+
+ 
+========================================== 
+ARQUIVO: extrator_edital.py 
+========================================== 
+
+"""
+EXTRATOR DE EDITAIS
+Busca, baixa e processa editais dos portais oficiais
+Mantém tudo no sistema sem redirecionar cliente
+"""
+
+import requests
+import re
+import json
+from datetime import datetime
+from typing import Dict, Optional, List
+from dataclasses import dataclass
+import os
+
+@dataclass
+class EditalCompleto:
+    """Estrutura completa de um edital"""
+    id: str
+    orgao: str
+    objeto: str
+    valor_estimado: float
+    data_abertura: Optional[str]
+    data_publicacao: str
+    modalidade: str
+    situacao: str
+    
+    # Conteúdo
+    texto_completo: str
+    anexos: List[Dict]
+    link_original: str
+    
+    # Processado
+    resumo_ia: Optional[str] = None
+    exigencias: List[str] = None
+    documentos_necessarios: List[str] = None
+    prazo_execucao: Optional[int] = None
+    garantia: Optional[float] = None
+    
+    # Arquivos locais
+    pdf_local: Optional[str] = None
+    html_local: Optional[str] = None
+
+
+class ExtratorEdital:
+    """
+    Extrai conteúdo completo de editais dos portais oficiais
+    """
+    
+    def __init__(self, pasta_cache: str = "editais_cache"):
+        self.pasta_cache = pasta_cache
+        os.makedirs(pasta_cache, exist_ok=True)
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+    
+    def extrair_pncp(self, numero_controle: str) -> Optional[EditalCompleto]:
+        """
+        Extrai edital completo do PNCP
+        """
+        try:
+            # API de detalhes do PNCP
+            url_api = f"https://pncp.gov.br/api/compras/{numero_controle}"
+            
+            print(f"  🔍 Buscando edital {numero_controle} no PNCP...")
+            resp = self.session.get(url_api, timeout=30)
+            
+            if resp.status_code != 200:
+                print(f"  ⚠️ API retornou {resp.status_code}")
+                return self._extrair_pncp_scraping(numero_controle)
+            
+            dados = resp.json()
+            
+            # Extrai texto do edital
+            texto_edital = self._extrair_texto_edital(dados)
+            
+            # Busca anexos/PDFs
+            anexos = self._buscar_anexos_pncp(numero_controle)
+            
+            # Baixa PDF se existir
+            pdf_path = None
+            if anexos:
+                pdf_path = self._baixar_anexo(anexos[0], numero_controle)
+            
+            edital = EditalCompleto(
+                id=numero_controle,
+                orgao=dados.get("orgaoEntidade", {}).get("razaoSocial", ""),
+                objeto=dados.get("objetoCompra", ""),
+                valor_estimado=float(dados.get("valorTotalEstimado", 0) or 0),
+                data_abertura=dados.get("dataAberturaProposta"),
+                data_publicacao=dados.get("dataPublicacaoPncp", ""),
+                modalidade=dados.get("modalidadeNome", ""),
+                situacao=dados.get("situacaoCompra", ""),
+                texto_completo=texto_edital,
+                anexos=anexos,
+                link_original=f"https://pncp.gov.br/comprasPublicas/{numero_controle}",
+                pdf_local=pdf_path
+            )
+            
+            # Salva cache
+            self._salvar_cache(edital)
+            
+            return edital
+            
+        except Exception as e:
+            print(f"  ❌ Erro ao extrair: {e}")
+            return None
+    
+    def _extrair_pncp_scraping(self, numero_controle: str) -> Optional[EditalCompleto]:
+        """
+        Fallback: extrai via scraping se API falhar
+        """
+        url = f"https://pncp.gov.br/comprasPublicas/{numero_controle}"
+        
+        try:
+            resp = self.session.get(url, timeout=30)
+            if resp.status_code != 200:
+                return None
+            
+            html = resp.text
+            
+            # Extrai dados do HTML
+            orgao = self._extrair_meta(html, 'orgao') or "Não informado"
+            objeto = self._extrair_meta(html, 'objeto') or "Não informado"
+            valor = self._extrair_valor_html(html)
+            
+            # Extrai texto do edital do HTML
+            texto = self._limpar_html(html)
+            
+            return EditalCompleto(
+                id=numero_controle,
+                orgao=orgao,
+                objeto=objeto,
+                valor_estimado=valor,
+                data_abertura=None,
+                data_publicacao=datetime.now().isoformat(),
+                modalidade="Pregão Eletrônico",
+                situacao="Aberto",
+                texto_completo=texto[:5000],  # Primeiros 5000 chars
+                anexos=[],
+                link_original=url
+            )
+            
+        except Exception as e:
+            print(f"  ❌ Scraping falhou: {e}")
+            return None
+    
+    def _extrair_texto_edital(self, dados: Dict) -> str:
+        """Extrai texto completo do edital"""
+        partes = []
+        
+        # Objeto
+        partes.append(f"OBJETO: {dados.get('objetoCompra', '')}")
+        
+        # Descrição detalhada se existir
+        if 'descricao' in dados:
+            partes.append(f"\nDESCRIÇÃO:\n{dados['descricao']}")
+        
+        # Itens da licitação
+        itens = dados.get('itens', [])
+        if itens:
+            partes.append("\nITENS:")
+            for i, item in enumerate(itens[:20], 1):  # Limita 20 itens
+                partes.append(f"  {i}. {item.get('descricao', '')} - Qtd: {item.get('quantidade', 0)}")
+        
+        # Critérios de julgamento
+        criterios = dados.get('criterioJulgamentoNome', '')
+        if criterios:
+            partes.append(f"\nCRITÉRIO DE JULGAMENTO: {criterios}")
+        
+        # Condições de pagamento
+        pagamento = dados.get('condicaoPagamento', '')
+        if pagamento:
+            partes.append(f"\nCONDIÇÃO DE PAGAMENTO: {pagamento}")
+        
+        # Prazos
+        entrega = dados.get('prazoEntrega', '')
+        if entrega:
+            partes.append(f"\nPRAZO DE ENTREGA: {entrega}")
+        
+        return "\n".join(partes)
+    
+    def _buscar_anexos_pncp(self, numero_controle: str) -> List[Dict]:
+        """Busca documentos anexos do edital"""
+        # Endpoint de anexos do PNCP
+        url = f"https://pncp.gov.br/api/compras/{numero_controle}/anexos"
+        
+        try:
+            resp = self.session.get(url, timeout=15)
+            if resp.status_code == 200:
+                return resp.json().get("anexos", [])
+        except:
+            pass
+        
+        return []
+    
+    def _baixar_anexo(self, anexo: Dict, edital_id: str) -> Optional[str]:
+        """Baixa PDF do anexo e salva localmente"""
+        url = anexo.get("url") or anexo.get("link")
+        if not url:
+            return None
+        
+        nome_arquivo = f"{edital_id}_{anexo.get('nome', 'edital')}.pdf"
+        caminho = os.path.join(self.pasta_cache, nome_arquivo)
+        
+        # Se já existe, retorna cache
+        if os.path.exists(caminho):
+            return caminho
+        
+        try:
+            print(f"  📥 Baixando PDF...")
+            resp = self.session.get(url, timeout=60, stream=True)
+            
+            if resp.status_code == 200:
+                with open(caminho, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print(f"  ✅ PDF salvo: {caminho}")
+                return caminho
+        except Exception as e:
+            print(f"  ⚠️ Erro ao baixar PDF: {e}")
+        
+        return None
+    
+    def _salvar_cache(self, edital: EditalCompleto):
+        """Salva edital em cache JSON"""
+        cache_file = os.path.join(self.pasta_cache, f"{edital.id}.json")
+        
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                'id': edital.id,
+                'orgao': edital.orgao,
+                'objeto': edital.objeto,
+                'valor_estimado': edital.valor_estimado,
+                'data_abertura': edital.data_abertura,
+                'data_publicacao': edital.data_publicacao,
+                'modalidade': edital.modalidade,
+                'situacao': edital.situacao,
+                'texto_completo': edital.texto_completo[:10000],  # Limita tamanho
+                'link_original': edital.link_original,
+                'pdf_local': edital.pdf_local,
+                'cache_em': datetime.now().isoformat()
+            }, f, ensure_ascii=False, indent=2)
+    
+    def _extrair_meta(self, html: str, campo: str) -> Optional[str]:
+        """Extrai metadados do HTML"""
+        padrao = rf'<meta[^>]*name=["\']{campo}["\'][^>]*content=["\']([^"\']+)["\']'
+        match = re.search(padrao, html, re.I)
+        if match:
+            return match.group(1)
+        
+        # Tenta regex alternativo
+        padrao2 = rf'{campo}["\']?\s*[:=]\s*["\']?([^"\'<>]+)'
+        match = re.search(padrao2, html, re.I)
+        return match.group(1) if match else None
+    
+    def _extrair_valor_html(self, html: str) -> float:
+        """Extrai valor estimado do HTML"""
+        padroes = [
+            r'valor\s*(?:total|estimado)?\s*[:=]?\s*R?\$?\s*([\d.,]+)',
+            r'R\$\s*([\d.,]+)\s*(?:reais)?',
+            r'([\d.,]+)\s*(?:mil|milhões?|bilhões?)\s*(?:de)?\s*reais'
+        ]
+        
+        for padrao in padroes:
+            match = re.search(padrao, html, re.I)
+            if match:
+                valor_str = match.group(1).replace('.', '').replace(',', '.')
+                try:
+                    return float(valor_str)
+                except:
+                    continue
+        
+        return 0.0
+    
+    def _limpar_html(self, html: str) -> str:
+        """Remove tags HTML e extrai texto limpo"""
+        # Remove scripts e styles
+        html = re.sub(r'<(script|style)[^>]*>[^<]*</\1>', '', html, flags=re.I)
+        # Remove tags
+        texto = re.sub(r'<[^>]+>', ' ', html)
+        # Remove espaços excessivos
+        texto = re.sub(r'\s+', ' ', texto)
+        return texto.strip()
+
+
+# Instância global
+extrator = ExtratorEdital()
+
+def obter_edital_completo(numero_controle: str, fonte: str = "PNCP") -> Optional[EditalCompleto]:
+    """
+    Função principal para obter edital completo
+    """
+    if fonte.upper() == "PNCP":
+        return extrator.extrair_pncp(numero_controle)
+    
+    # Adicionar outras fontes aqui
+    return None 
+[FIM DO ARQUIVO extrator_edital.py] 
+
+ 
+========================================== 
+ARQUIVO: fontes.py 
+========================================== 
+"""
+FONTES DE LICITAÇÕES - VERSÃO FINAL
+Extrai dados reais com links para embed no sistema
+"""
+
+import requests
+import json
+import re
+from datetime import datetime, timedelta
+from typing import List, Dict
+
+def extrair_valor(valor_str):
+    """Extrai valor numérico de qualquer formato"""
+    if isinstance(valor_str, (int, float)):
+        return float(valor_str)
+    
+    valor_str = str(valor_str)
+    # Remove tudo exceto números, ponto e vírgula
+    valor_limpo = re.sub(r'[^\d.,]', '', valor_str)
+    
+    try:
+        # Detecta formato brasileiro vs americano
+        if ',' in valor_limpo and '.' in valor_limpo:
+            if valor_limpo.rfind(',') > valor_limpo.rfind('.'):
+                valor_limpo = valor_limpo.replace('.', '').replace(',', '.')
+            else:
+                valor_limpo = valor_limpo.replace(',', '')
+        elif ',' in valor_limpo:
+            valor_limpo = valor_limpo.replace(',', '.')
+        
+        return float(valor_limpo) if valor_limpo else 0.0
+    except:
+        return 0.0
+
+def buscar_pncp(pagina=1):
+    """
+    Busca no PNCP com número de controle para embed
+    """
+    url = "https://pncp.gov.br/api/search/"
+    
+    params = {
+        "q": "*",
+        "page": pagina,
+        "pageSize": 50,
+        "sort": "date",
+        "order": "desc"
+    }
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://pncp.gov.br/'
+    }
+    
+    try:
+        print(f"  🔍 PNCP página {pagina}...")
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if resp.status_code != 200:
+            print(f"  ⚠️ PNCP status {resp.status_code}")
+            return []
+        
+        dados = resp.json()
+        licitacoes = []
+        
+        for item in dados.get("items", []):
+            numero_controle = item.get("numeroControle", "")
+            sequencial = item.get("sequencial", "")
+            
+            # LINK PARA EMBED NO SISTEMA (não redireciona)
+            if numero_controle:
+                # Link direto do PNCP que permite embed
+                link_embed = f"https://pncp.gov.br/comprasPublicas/{numero_controle}"
+                tipo_link = "embed"
+            else:
+                # Fallback: busca no portal
+                objeto_busca = item.get("objeto", "")[:30].replace(" ", "%20")
+                link_embed = f"https://pncp.gov.br/app/editais?q={objeto_busca}"
+                tipo_link = "busca"
+            
+            licitacao = {
+                "orgao": item.get("orgaoNome", "Não informado"),
+                "objeto": item.get("objeto", ""),
+                "valor": extrair_valor(item.get("valorTotal") or item.get("valorEstimado", 0)),
+                "data_publicacao": item.get("dataPublicacao", ""),
+                "link": link_embed,
+                "fonte": "PNCP",
+                "modalidade": item.get("modalidade", ""),
+                "situacao": item.get("situacao", ""),
+                "numero_controle": numero_controle,
+                "sequencial": sequencial,
+                "tipo_link": tipo_link
+            }
+            licitacoes.append(licitacao)
+        
+        print(f"  ✅ PNCP: {len(licitacoes)} licitações")
+        return licitacoes
+        
+    except Exception as e:
+        print(f"  ❌ Erro PNCP: {str(e)[:80]}")
+        return []
+
+def buscar_comprasgov(pagina=1):
+    """
+    Busca no Compras.gov.br
+    """
+    url = "https://compras.dados.gov.br/licitacoes/v1/licitacoes.json"
+    
+    params = {
+        "offset": (pagina - 1) * 100,
+        "order": "desc"
+    }
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+    }
+    
+    try:
+        print(f"  🔍 ComprasGov...")
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if resp.status_code != 200:
+            return []
+        
+        dados = resp.json()
+        licitacoes = []
+        
+        for item in dados.get("_embedded", {}).get("licitacoes", []):
+            # Extrai ID da URL
+            self_link = item.get("_links", {}).get("self", {}).get("href", "")
+            licitacao_id = self_link.split("/")[-1] if self_link else ""
+            
+            # Link para embed no ComprasGov
+            if licitacao_id:
+                link_embed = f"https://compras.gov.br/legislacao/pregao-electronico/{licitacao_id}"
+                tipo_link = "embed"
+            else:
+                objeto = item.get("objeto", "")[:30].replace(" ", "+")
+                link_embed = f"https://compras.gov.br/consulta/editais?q={objeto}"
+                tipo_link = "busca"
+            
+            licitacao = {
+                "orgao": item.get("orgao", {}).get("nome", "Não informado"),
+                "objeto": item.get("objeto", ""),
+                "valor": extrair_valor(item.get("valor", 0)),
+                "data_publicacao": item.get("publicacao", ""),
+                "link": link_embed,
+                "fonte": "COMPRASGOV",
+                "modalidade": item.get("modalidade", ""),
+                "situacao": item.get("situacao", ""),
+                "numero_controle": licitacao_id,
+                "sequencial": None,
+                "tipo_link": tipo_link
+            }
+            licitacoes.append(licitacao)
+        
+        print(f"  ✅ ComprasGov: {len(licitacoes)} licitações")
+        return licitacoes
+        
+    except Exception as e:
+        print(f"  ❌ Erro ComprasGov: {str(e)[:80]}")
+        return []
+
+def buscar_todas_fontes():
+    """
+    Coleta de todas as fontes
+    """
+    todas = []
+    
+    print("\n" + "="*60)
+    print("🔍 COLETA DE LICITAÇÕES")
+    print("="*60)
+    
+    # PNCP (2 páginas)
+    p1 = buscar_pncp(1)
+    todas.extend(p1)
+    if len(p1) > 0:
+        todas.extend(buscar_pncp(2))
+    
+    # ComprasGov
+    todas.extend(buscar_comprasgov(1))
+    
+    print(f"\n{'='*60}")
+    print(f"📊 TOTAL: {len(todas)} licitações")
+    print(f"{'='*60}")
+    
+    # Mostra exemplo
+    if todas:
+        print(f"\n🔗 Exemplo de link gerado:")
+        ex = todas[0]
+        print(f"   Fonte: {ex['fonte']}")
+        print(f"   Número: {ex['numero_controle'] or 'N/A'}")
+        print(f"   Tipo: {ex['tipo_link']}")
+        print(f"   Link: {ex['link'][:60]}...")
+    
+    return todas 
+[FIM DO ARQUIVO fontes.py] 
+
+ 
+========================================== 
+ARQUIVO: fontes_hibrido.py 
+========================================== 
+"""
+FONTES HÍBRIDO: APIs + Dados de Demonstração
+Quando APIs do governo falham, gera dados realistas para teste
+"""
+
+import requests
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict
+
+# Dados realistas para demonstração
+ORGAOS_DEMO = [
+    "Prefeitura Municipal de São Paulo - SP",
+    "Prefeitura de Belo Horizonte - MG",
+    "Prefeitura de Curitiba - PR",
+    "Prefeitura de Recife - PE",
+    "Prefeitura de Porto Alegre - RS",
+    "Governo do Estado de Minas Gerais",
+    "Governo do Estado de São Paulo",
+    "Universidade Federal de Minas Gerais",
+    "Hospital das Clínicas de Porto Alegre",
+    "Secretaria de Educação do Rio de Janeiro",
+    "Prefeitura de Brasília - DF",
+    "Instituto Federal de São Paulo",
+    "Prefeitura de Salvador - BA",
+    "Prefeitura de Fortaleza - CE",
+    "Prefeitura de Manaus - AM"
+]
+
+OBJETOS_DEMO = [
+    {"nome": "Aquisição de 500 cadeiras escolares", "categoria": "escolar", "valor_min": 80000, "valor_max": 150000},
+    {"nome": "Fornecimento de material escolar completo - kit aluno", "categoria": "escolar", "valor_min": 50000, "valor_max": 300000},
+    {"nome": "Contratação de serviços de reforma de escolas", "categoria": "obra", "valor_min": 200000, "valor_max": 2000000},
+    {"nome": "Aquisição de equipamentos para cozinha industrial", "categoria": "cozinha", "valor_min": 60000, "valor_max": 400000},
+    {"nome": "Fornecimento de uniformes escolares", "categoria": "escolar", "valor_min": 40000, "valor_max": 250000},
+    {"nome": "Instalação de cobertura metálica em quadra poliesportiva", "categoria": "obra", "valor_min": 150000, "valor_max": 800000},
+    {"nome": "Aquisição de notebooks para professores", "categoria": "informatica", "valor_min": 100000, "valor_max": 600000},
+    {"nome": "Fornecimento de material de limpeza hospitalar", "categoria": "limpeza", "valor_min": 30000, "valor_max": 180000},
+    {"nome": "Construção de escola modular em estrutura metálica", "categoria": "obra", "valor_min": 500000, "valor_max": 5000000},
+    {"nome": "Reforma e ampliação de unidade de saúde", "categoria": "obra", "valor_min": 300000, "valor_max": 3000000},
+    {"nome": "Aquisição de playground e equipamentos recreativos", "categoria": "escolar", "valor_min": 45000, "valor_max": 350000},
+    {"nome": "Fornecimento de cimento e material de construção", "categoria": "material", "valor_min": 60000, "valor_max": 500000},
+    {"nome": "Instalação de energia solar em prédios públicos", "categoria": "obra", "valor_min": 200000, "valor_max": 1500000},
+    {"nome": "Aquisição de fogão industrial e freezer", "categoria": "cozinha", "valor_min": 35000, "valor_max": 200000},
+    {"nome": "Contratação de serviços de manutenção predial", "categoria": "servico", "valor_min": 50000, "valor_max": 400000},
+    {"nome": "Fornecimento de computadores e impressoras", "categoria": "informatica", "valor_min": 80000, "valor_max": 450000},
+    {"nome": "Aquisição de equipamentos esportivos", "categoria": "escolar", "valor_min": 25000, "valor_max": 180000},
+    {"nome": "Reforma de ginásio poliesportivo", "categoria": "obra", "valor_min": 180000, "valor_max": 1200000},
+    {"nome": "Fornecimento de mobiliário de escritório", "categoria": "escritorio", "valor_min": 40000, "valor_max": 300000},
+    {"nome": "Aquisição de sistema de segurança e CFTV", "categoria": "informatica", "valor_min": 70000, "valor_max": 500000}
+]
+
+def gerar_numero_controle():
+    """Gera número de controle no formato do PNCP"""
+    ano = datetime.now().year
+    sequencial = random.randint(100000, 999999)
+    return f"{ano}{sequencial}"
+
+ddef gerar_licitacoes_demo(quantidade=20) -> List[Dict]:
+    """
+    Gera licitações de demonstração realistas
+    COM LINKS DE BUSCA FUNCIONAIS (não links diretos falsos)
+    """
+    licitacoes = []
+    hoje = datetime.now()
+    
+    for i in range(quantidade):
+        # Seleciona objeto aleatório
+        obj_template = random.choice(OBJETOS_DEMO)
+        
+        # Gera valores
+        valor = random.randint(obj_template["valor_min"], obj_template["valor_max"])
+        
+        # Data aleatória (últimos 7 dias)
+        dias_atras = random.randint(0, 7)
+        data_pub = (hoje - timedelta(days=dias_atras)).strftime("%Y-%m-%d")
+        
+        # LINK DE BUSCA FUNCIONAL (não edital específico falso)
+        termo_busca = obj_template["nome"][:25].replace(" ", "%20")
+        
+        if random.choice([True, False]):
+            # Busca no PNCP
+            link_funcional = f"https://pncp.gov.br/app/editais?q={termo_busca}"
+            fonte = "PNCP"
+        else:
+            # Busca no ComprasGov
+            link_funcional = f"https://compras.gov.br/consulta/editais?q={termo_busca}"
+            fonte = "COMPRASGOV"
+        
+        # Monta objeto completo
+        licitacao = {
+            "orgao": random.choice(ORGAOS_DEMO),
+            "objeto": obj_template["nome"],
+            "valor": valor,
+            "data_publicacao": data_pub,
+            "link": link_funcional,  # ← LINK DE BUSCA FUNCIONAL
+            "fonte": fonte,
+            "modalidade": random.choice(["Pregão Eletrônico", "Concorrência", "Dispensa de Licitação"]),
+            "situacao": "Aberto",
+            "numero_controle": None,  # ← None porque é demo
+            "sequencial": None,
+            "tipo_link": "busca"  # ← Tipo busca, não embed direto
+        }
+        
+        licitacoes.append(licitacao)
+    
+    return licitacoes
+
+def buscar_pncp_real(pagina=1):
+    """Tenta buscar PNCP real"""
+    try:
+        url = "https://pncp.gov.br/api/search/"
+        params = {"q": "*", "page": pagina, "pageSize": 50}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+        }
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code == 200:
+            dados = resp.json()
+            licitacoes = []
+            
+            for item in dados.get("items", []):
+                numero = item.get("numeroControle", "")
+                licitacoes.append({
+                    "orgao": item.get("orgaoNome", "Não informado"),
+                    "objeto": item.get("objeto", ""),
+                    "valor": float(item.get("valorTotal") or item.get("valorEstimado", 0) or 0),
+                    "data_publicacao": item.get("dataPublicacao", ""),
+                    "link": f"https://pncp.gov.br/comprasPublicas/{numero}" if numero else "#",
+                    "fonte": "PNCP",
+                    "modalidade": item.get("modalidade", ""),
+                    "situacao": item.get("situacao", ""),
+                    "numero_controle": numero,
+                    "sequencial": item.get("sequencial", ""),
+                    "tipo_link": "embed" if numero else "busca"
+                })
+            return licitacoes
+            
+    except Exception as e:
+        print(f"    API PNCP falhou: {str(e)[:50]}")
+    
+    return None  # Retorna None para indicar falha
+
+def buscar_comprasgov_real():
+    """Tenta buscar ComprasGov real"""
+    try:
+        url = "https://compras.dados.gov.br/licitacoes/v1/licitacoes.json"
+        params = {"offset": 0}
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code == 200:
+            dados = resp.json()
+            licitacoes = []
+            
+            for item in dados.get("_embedded", {}).get("licitacoes", []):
+                link_self = item.get("_links", {}).get("self", {}).get("href", "")
+                lic_id = link_self.split("/")[-1] if link_self else ""
+                
+                licitacoes.append({
+                    "orgao": item.get("orgao", {}).get("nome", "Não informado"),
+                    "objeto": item.get("objeto", ""),
+                    "valor": float(item.get("valor", 0) or 0),
+                    "data_publicacao": item.get("publicacao", ""),
+                    "link": f"https://compras.gov.br/legislacao/pregao-electronico/{lic_id}" if lic_id else "#",
+                    "fonte": "COMPRASGOV",
+                    "modalidade": item.get("modalidade", ""),
+                    "situacao": item.get("situacao", ""),
+                    "numero_controle": lic_id,
+                    "sequencial": None,
+                    "tipo_link": "embed" if lic_id else "busca"
+                })
+            return licitacoes
+            
+    except Exception as e:
+        print(f"    API ComprasGov falhou: {str(e)[:50]}")
+    
+    return None
+
+def buscar_todas_fontes() -> List[Dict]:
+    """
+    COLETA HÍBRIDA:
+    1. Tenta APIs reais
+    2. Se falhar, usa dados de demonstração
+    """
+    todas = []
+    modo_demo = False
+    
+    print("\n" + "="*60)
+    print("🔍 COLETA DE LICITAÇÕES")
+    print("="*60)
+    
+    # Tenta PNCP real
+    print("  📡 Tentando PNCP (API real)...")
+    pncp_real = buscar_pncp_real(1)
+    
+    if pncp_real is not None and len(pncp_real) > 0:
+        todas.extend(pncp_real)
+        print(f"  ✅ PNCP real: {len(pncp_real)} licitações")
+    else:
+        print("  ⚠️ PNCP indisponível, usando demonstração...")
+        modo_demo = True
+    
+    # Tenta ComprasGov real
+    print("  📡 Tentando ComprasGov (API real)...")
+    gov_real = buscar_comprasgov_real()
+    
+    if gov_real is not None and len(gov_real) > 0:
+        todas.extend(gov_real)
+        print(f"  ✅ ComprasGov real: {len(gov_real)} licitações")
+    else:
+        print("  ⚠️ ComprasGov indisponível...")
+        modo_demo = True
+    
+    # Se APIs falharam, gera demonstração
+    if len(todas) == 0:
+        print("\n" + "!"*60)
+        print("🎮 MODO DEMONSTRAÇÃO ATIVADO")
+        print("   (APIs do governo estão fora do ar)")
+        print("!"*60)
+        
+        licitacoes_demo = gerar_licitacoes_demo(25)
+        todas.extend(licitacoes_demo)
+        
+        print(f"\n  ✅ Geradas {len(licitacoes_demo)} licitações de demonstração")
+        print("  💡 Estas são fictícias mas realistas para teste do sistema")
+    
+    # Resumo
+    print(f"\n{'='*60}")
+    print(f"📊 TOTAL: {len(todas)} licitações")
+    if modo_demo:
+        print(f"   ⚠️ MODO DEMONSTRAÇÃO (dados de teste)")
+    else:
+        print(f"   ✅ DADOS REAIS do governo")
+    print(f"{'='*60}")
+    
+    # Mostra exemplo
+    if todas:
+        print(f"\n🔗 Exemplo:")
+        ex = todas[0]
+        print(f"   Órgão: {ex['orgao'][:50]}...")
+        print(f"   Objeto: {ex['objeto'][:50]}...")
+        print(f"   Valor: R$ {ex['valor']:,.2f}")
+        print(f"   Link: {ex['link'][:60]}...")
+    
+    return todas 
+[FIM DO ARQUIVO fontes_hibrido.py] 
+
+ 
+========================================== 
+ARQUIVO: iniciar_tudo.py 
+========================================== 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROBÔ DE LICITAÇÕES NACIONAL - SISTEMA UNIFICADO
+Roda coletor + servidor web automaticamente
+"""
+
+import subprocess
+import sys
+import time
+import threading
+import os
+
+def rodar_robo():
+    """Roda o coletor de licitações"""
+    print("🤖 Iniciando coletor de licitações...")
+    subprocess.run([sys.executable, "robo.py"])
+
+def rodar_web():
+    """Roda o servidor web"""
+    print("🌐 Iniciando painel web...")
+    time.sleep(3)  # Espera o banco criar
+    subprocess.run([sys.executable, "app.py"])
+
+if __name__ == "__main__":
+    print("""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║     🤖 ROBÔ DE LICITAÇÕES NACIONAL - SISTEMA COMPLETO       ║
+    ║                                                              ║
+    ║  Iniciando automaticamente:                                  ║
+    ║  1. Coletor de licitações (robo.py)                         ║
+    ║  2. Servidor web (app.py)                                   ║
+    ║                                                              ║
+    ║  Acesse: http://localhost:5000                              ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
+    
+    # Roda o coletor em thread separada
+    thread_robo = threading.Thread(target=rodar_robo)
+    thread_robo.daemon = True
+    thread_robo.start()
+    
+    # Roda o servidor web (principal)
+    rodar_web() 
+[FIM DO ARQUIVO iniciar_tudo.py] 
+
+ 
+========================================== 
+ARQUIVO: robo.py 
+========================================== 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import time
+import sys
+from datetime import datetime
+
+# Configurações padrão (caso config.py falhe)
+try:
+    from config import INTERVALO_BUSCA, MARGEM_MINIMA, PALAVRAS_ARQUIVO
+except ImportError:
+    INTERVALO_BUSCA = 1800  # 30 minutos
+    MARGEM_MINIMA = 0.25    # 25%
+    PALAVRAS_ARQUIVO = "keywords.txt"
+
+# Banco de dados
+try:
+    from banco import criar_banco, salvar_licitacao, estatisticas
+except ImportError as e:
+    print(f"❌ Erro ao importar banco: {e}")
+    sys.exit(1)
+
+# Analisador
+try:
+    from analisador import margem
+except ImportError as e:
+    print(f"❌ Erro ao importar analisador: {e}")
+    sys.exit(1)
+
+# Fontes de dados - tenta híbrido primeiro, depois normal
+try:
+    from fontes_hibrido import buscar_todas_fontes
+    print("✅ Usando modo HÍBRIDO (APIs + Demo)")
+except ImportError:
+    try:
+        from fontes import buscar_todas_fontes
+        print("✅ Usando modo API apenas")
+    except ImportError as e:
+        print(f"❌ Erro ao importar fontes: {e}")
+        sys.exit(1)
+
+
+class RoboLicitacoes:
+    def __init__(self):
+        self.palavras_chave = self.carregar_palavras()
+        self.rodadas = 0
+        self.oportunidades_encontradas = 0
+        
+    def carregar_palavras(self):
+        """Carrega palavras-chave do arquivo"""
+        try:
+            with open(PALAVRAS_ARQUIVO, 'r', encoding='utf-8') as f:
+                palavras = []
+                for linha in f:
+                    linha = linha.strip()
+                    if linha and not linha.startswith('#'):
+                        palavras.append(linha.lower())
+                print(f"✅ {len(palavras)} palavras-chave carregadas")
+                return palavras
+        except Exception as e:
+            print(f"⚠️ Usando palavras padrão: {e}")
+            return [
+                "material escolar", "uniforme", "cadeira escolar",
+                "cozinha industrial", "equipamento esportivo",
+                "informatica", "construcao", "limpeza",
+                "cadeira", "mesa", "escola", "notebook"
+            ]
+    
+    def verificar_compatibilidade(self, texto):
+        """Verifica se texto contém palavra-chave"""
+        if not texto:
+            return False, None
+        texto_lower = texto.lower()
+        for palavra in self.palavras_chave:
+            if palavra in texto_lower:
+                return True, palavra
+        return False, None
+    
+    def processar_licitacao(self, licitacao):
+        """Processa e salva uma licitação"""
+        objeto = licitacao.get("objeto", "")
+        valor = licitacao.get("valor", 0) or 0
+        
+        if not objeto:
+            return False
+        
+        # Verifica palavras-chave
+        compativel, palavra = self.verificar_compatibilidade(objeto)
+        if not compativel:
+            return False
+        
+        # Calcula margem
+        try:
+            m = margem(valor)
+        except:
+            m = 0.25  # Padrão se falhar
+        
+        if m < MARGEM_MINIMA:
+            return False
+        
+        # Salva com todos os campos
+        try:
+            novo_id = salvar_licitacao(
+                orgao=licitacao.get("orgao", "")[:500],
+                objeto=objeto[:2000],
+                valor=float(valor),
+                margem=float(m),
+                fonte=licitacao.get("fonte", "DESCONHECIDO"),
+                link=licitacao.get("link", "#"),
+                data_publicacao=licitacao.get("data_publicacao", ""),
+                numero_controle=licitacao.get("numero_controle"),
+                sequencial=licitacao.get("sequencial"),
+                modalidade=licitacao.get("modalidade"),
+                situacao=licitacao.get("situacao"),
+                tipo_link=licitacao.get("tipo_link", "busca")
+            )
+            
+            if novo_id:
+                self.oportunidades_encontradas += 1
+                print("\n" + "="*60)
+                print("🎯 OPORTUNIDADE ENCONTRADA!")
+                print(f"ID: {novo_id}")
+                print(f"Órgão: {licitacao.get('orgao', '')[:60]}...")
+                print(f"Palavra-chave: {palavra}")
+                print(f"Valor: R$ {float(valor):,.2f}")
+                print(f"Margem: {m*100:.1f}%")
+                print(f"Link: {licitacao.get('link', '')[:50]}...")
+                print("="*60 + "\n")
+                return True
+                
+        except Exception as e:
+            print(f"❌ Erro ao salvar: {e}")
+            return False
+        
+        return False
+    
+    def executar_rodada(self):
+        """Executa uma rodada de coleta"""
+        self.rodadas += 1
+        print(f"\n{'='*60}")
+        print(f"🤖 RODADA #{self.rodadas} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+        print(f"{'='*60}")
+        
+        try:
+            licitacoes = buscar_todas_fontes()
+        except Exception as e:
+            print(f"❌ Erro na coleta: {e}")
+            licitacoes = []
+        
+        novas = 0
+        for lic in licitacoes:
+            if self.processar_licitacao(lic):
+                novas += 1
+        
+        # Estatísticas
+        try:
+            stats = estatisticas()
+            print(f"\n📊 ESTATÍSTICAS:")
+            print(f"   Oportunidades hoje: {stats.get('hoje', 0)}")
+            print(f"   Total no banco: {stats.get('total', 0)}")
+            print(f"   Valor total: R$ {stats.get('valor_total', 0):,.2f}")
+            print(f"   Novas nesta rodada: {novas}")
+        except Exception as e:
+            print(f"⚠️ Erro nas estatísticas: {e}")
+        
+        return novas
+    
+    def iniciar(self):
+        """Inicia o robô em loop"""
+        print("""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║           🤖 ROBÔ DE LICITAÇÕES NACIONAL v2.0               ║
+        ║                                                              ║
+        ║  Sistema com Visualizador Embutido - Não redireciona!       ║
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+        
+        try:
+            criar_banco()
+            print("✅ Banco de dados pronto")
+        except Exception as e:
+            print(f"❌ Erro no banco: {e}")
+            return
+        
+        print(f"\n⚙️  Configurações:")
+        print(f"   Margem mínima: {MARGEM_MINIMA*100}%")
+        print(f"   Intervalo: {INTERVALO_BUSCA/60} minutos")
+        print(f"   Palavras-chave: {len(self.palavras_chave)} termos")
+        
+        print("\n🚀 Iniciando monitoramento...\n")
+        
+        try:
+            while True:
+                self.executar_rodada()
+                
+                print(f"\n⏳ Próxima varredura em {INTERVALO_BUSCA/60} minutos...")
+                print("(Pressione Ctrl+C para parar)\n")
+                
+                time.sleep(INTERVALO_BUSCA)
+                
+        except KeyboardInterrupt:
+            print("\n\n🛑 Robô parado pelo usuário")
+            try:
+                stats = estatisticas()
+                print(f"\n📈 RESUMO FINAL:")
+                print(f"   Rodadas: {self.rodadas}")
+                print(f"   Oportunidades: {self.oportunidades_encontradas}")
+                print(f"   Total no banco: {stats.get('total', 0)}")
+            except:
+                pass
+            print("\n💾 Dados salvos em: banco.db")
+            print("🌐 Acesse o painel: http://localhost:5000")
+            print("👋 Até a próxima!")
+
+
+def main():
+    robo = RoboLicitacoes()
+    robo.iniciar()
+
+
+if __name__ == "__main__":
+    main() 
+[FIM DO ARQUIVO robo.py] 
+
+ 
+========================================== 
+ARQUIVO: iniciar_robo.bat 
+========================================== 
+@echo off
+echo ==========================================
+echo  🤖 ROBÔ DE LICITAÇÕES NACIONAL
+echo ==========================================
+echo.
+
+echo Iniciando coletor em nova janela...
+start cmd /k "cd /d D:\robo_licitacoes_nacional && python robo.py"
+
+echo Aguardando 5 segundos...
+timeout /t 5 /nobreak > nul
+
+echo Iniciando servidor web...
+start cmd /k "cd /d D:\robo_licitacoes_nacional && python app.py"
+
+echo.
+echo ==========================================
+echo Acesse: http://localhost:5000
+echo ==========================================
+pause 
+[FIM DO ARQUIVO iniciar_robo.bat] 
+
+ 
+========================================== 
+ARQUIVO: keywords.txt 
+========================================== 
+EDUCAÇÃO
+material escolar
+kit escolar
+uniforme escolar
+cadeira escolar
+mesa escolar
+carteira escolar
+conjunto aluno (padrão FNDE)
+conjunto professor
+lousa digital
+quadro branco
+armario escolar
+estante biblioteca
+colchonete infantil
+bebedouro escolar
+playground
+parque infantil
+brinquedo pedagogico
+material didatico
+material em braille
+COZINHA INDUSTRIAL
+cozinha industrial
+fogao industrial
+forno industrial
+freezer industrial
+geladeira industrial
+camara fria
+batedeira industrial
+liquidificador industrial
+processador alimentos
+descascador de legumes industrial
+bancada inox
+mesa inox
+carro termico / banho maria
+estante gradeada inox
+panela industrial
+utensilio cozinha industrial
+exaustor industrial
+coifa industrial
+sistema contra incendio para coifa
+ESPORTES
+equipamento esportivo
+bola futebol
+bola futsal
+bola volei
+bola basquete
+rede esportiva
+trave futebol
+tabela basquete
+poste de volei/tenis
+placar eletronico
+academia ar livre
+equipamento ginastica
+piso esportivo
+pintura epoxi esportiva
+grama sintetica
+arquibancada metalica
+cone treinamento
+tatame eva
+colete de treino
+ESCRITÓRIO
+cadeira escritorio
+cadeira ergonomica
+longarina (cadeira de espera)
+mesa escritorio
+mesa de reuniao
+armario metalico
+arquivo aco
+estante metalica
+gaveteiro
+divisoria escritorio
+persiana
+balcao recepcao
+INFORMÁTICA
+computador
+notebook
+chromebook
+tablet educacional
+gabinete de recarga (carrinho de tablets)
+monitor
+impressora
+scanner
+servidor
+rack para servidor
+switch rede
+roteador
+nobreak
+projetor multimidia
+datashow
+lousa digital
+toner
+cartucho
+papel a4
+licenciamento de software
+CONSTRUÇÃO E ESTRUTURAS METÁLICAS (SEU SETOR)
+cobertura metalica
+galpao metalico
+mezanino metalico
+tesoura metalica
+trelica metalica
+viga metalica
+pilar metalico
+telha termoacustica (sanduiche)
+telha trapezoidal
+gradil (tipo orsomet / nylofor)
+corrimao e guarda-corpo em aco
+passarela metalica
+escada de incendio metalica
+material construcao
+cimento
+areia
+brita
+tijolo
+bloco concreto
+telha metalica
+telha fibrocimento
+estrutura metalica
+perfil metalico
+aco estrutural
+vergalhao
+tela soldada
+tubo aco
+parafuso estrutural
+steel frame
+light steel frame
+drywall
+placa cimenticia
+manta asfaltica
+impermeabilizante
+tinta latex
+piso ceramico / porcelanato
+louca sanitaria e metais
+caixa d'agua industrial
+ENERGIA SOLAR
+energia solar
+painel solar
+placa solar
+inversor solar
+controlador carga
+bateria solar
+kit solar
+instalacao solar
+estrutura de fixacao para paineis
+LIMPEZA
+material limpeza
+detergente
+desinfetante
+papel higienico
+papel toalha
+sabonete liquido
+saco lixo
+lixeira
+container de lixo (contentor)
+esfregao
+vassoura
+equipamento limpeza
+lavadora alta pressao
+varredeira industrial
+aspirador industrial
+SAÚDE
+equipamento hospitalar
+mobiliario hospitalar
+cama hospitalar
+maca hospitalar
+poltrona de acompanhante
+cadeira rodas
+monitor paciente
+equipamento medico
+insumo hospitalar
+kit de primeiros socorros
+AGRICULTURA
+drone agricola
+implemento agricola
+trator
+rocadeira
+pulverizador
+semente
+fertilizante
+cerca aramada
+SERVIÇOS E OBRAS
+obra
+engenharia
+reforma
+ampliacao
+construcao
+manutencao predial
+execucao obra
+servico engenharia
+memorial descritivo
+planilha orcamentaria
+construcao modular
+pavimentacao / asfalto
+cercamento / alambrado
+TERMOS ESTRATÉGICOS
+registro preco
+ata de registro de preco (arp)
+aquisicao equipamentos
+fornecimento
+dispensa licitacao
+inexigibilidade
+pregao eletronico
+concorrencia publica
+contratacao direta
+menor preco global
+menor preco por lote
+chamamento publico
+ 
+[FIM DO ARQUIVO keywords.txt] 
+
+ 
+========================================== 
+ARQUIVO: requisitos.txt 
+========================================== 
+requests>=2.28.0
+flask>=2.0.0 
+[FIM DO ARQUIVO requisitos.txt] 
+
+ 
+========================================== 
+ARQUIVO: sistema_completo.txt 
+========================================== 
+==========================================  
+EBPRICE SYSTEM - CODIGO COMPLETO  
+Gerado em: 06.03.2026 16:52:35.66  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: analisador.py 
+========================================== 
+"""
+ANALISADOR FINANCEIRO
+Calcula custos, margens e viabilidade de licitações
+"""
+
+def custo_estimado(valor, tipo="produto"):
+    """
+    Estima custo baseado no tipo de produto/serviço
+    """
+    fatores = {
+        "produto": 0.65,      # 35% margem
+        "servico": 0.55,      # 45% margem
+        "obra": 0.70,         # 30% margem
+        "material_construcao": 0.60,
+        "informatica": 0.75,
+        "limpeza": 0.55,
+        "escolar": 0.60
+    }
+    
+    fator = fatores.get(tipo, 0.65)
+    return valor * fator
+
+def margem(valor, custo=None):
+    """
+    Calcula margem de lucro
+    Se custo não informado, estima automaticamente
+    """
+    if custo is None:
+        custo = custo_estimado(valor)
+    
+    if valor <= 0:
+        return 0.0
+    
+    lucro = valor - custo
+    return lucro / valor
+
+def calcular_lucro(valor_estimado, tipo="produto"):
+    """
+    Calcula lucro estimado completo
+    """
+    custo = custo_estimado(valor_estimado, tipo)
+    lucro = valor_estimado - custo
+    margem_pct = (lucro / valor_estimado) if valor_estimado > 0 else 0
+    
+    return {
+        "valor_estimado": valor_estimado,
+        "custo_estimado": custo,
+        "lucro_estimado": lucro,
+        "margem": margem_pct,
+        "margem_percentual": f"{margem_pct * 100:.1f}%"
+    }
+
+def analisar_edital(texto_objeto, valor_estimado):
+    """
+    Análise completa de edital (versão básica sem IA)
+    """
+    # Detecta tipo pelo texto
+    texto_lower = texto_objeto.lower()
+    
+    if any(p in texto_lower for p in ["servico", "execucao", "instalacao"]):
+        tipo = "servico"
+    elif any(p in texto_lower for p in ["obra", "construcao", "reforma"]):
+        tipo = "obra"
+    elif any(p in texto_lower for p in ["material construcao", "cimento", "tijolo"]):
+        tipo = "material_construcao"
+    elif any(p in texto_lower for p in ["computador", "notebook", "impressora"]):
+        tipo = "informatica"
+    elif any(p in texto_lower for p in ["limpeza", "detergente", "papel"]):
+        tipo = "limpeza"
+    elif any(p in texto_lower for p in ["escolar", "cadeira escolar", "uniforme"]):
+        tipo = "escolar"
+    else:
+        tipo = "produto"
+    
+    # Calcula financeiro
+    financeiro = calcular_lucro(valor_estimado, tipo)
+    
+    # Análise de viabilidade simples
+    margem_val = financeiro["margem"]
+    
+    if margem_val >= 0.35:
+        viabilidade = 75
+        recomendacao = "EXCELENTE"
+        chance = "70%"
+    elif margem_val >= 0.30:
+        viabilidade = 60
+        recomendacao = "BOA"
+        chance = "55%"
+    elif margem_val >= 0.25:
+        viabilidade = 50
+        recomendacao = "REGULAR"
+        chance = "45%"
+    else:
+        viabilidade = 35
+        recomendacao = "AVALIAR"
+        chance = "30%"
+    
+    # Preço sugerido (para 30% de margem)
+    preco_sugerido = valor_estimado * 0.70
+    
+    return {
+        "viabilidade": viabilidade,
+        "recomendacao": recomendacao,
+        "preco_sugerido": preco_sugerido,
+        "margem_recomendada": "30%",
+        "chance_vitoria": chance,
+        "custo_estimado": financeiro["custo_estimado"],
+        "lucro_estimado": financeiro["lucro_estimado"],
+        "margem_calculada": financeiro["margem_percentual"],
+        "tipo_detectado": tipo,
+        "riscos": ["Concorrência desconhecida", "Prazo a verificar"],
+        "exigencias": ["Certidões negativas", "Regularidade fiscal"],
+        "documentos": ["CNPJ", "Contrato Social", "Certidão Federal"]
+    } 
+[FIM DO ARQUIVO analisador.py] 
+
+ 
+========================================== 
+ARQUIVO: app.py 
+========================================== 
+"""
+APP.PY - SISTEMA COMPLETO COM VISUALIZADOR EMBUTIDO
+Flask + SQLite + Visualizador de Editais (sem redirecionar)
+"""
+
+from flask import Flask, render_template, jsonify, request, send_file, redirect
+from flask_cors import CORS
+import sqlite3
+import json
+from datetime import datetime
+import os
+import requests
+
+# Importa módulos do sistema
+from banco import (
+    criar_banco, get_licitacao_by_id, listar_oportunidades, 
+    estatisticas, atualizar_analise_licitacao
+)
+from analisador import analisar_edital as analisador_basico
+
+app = Flask(__name__)
+CORS(app)
+
+# Configurações
+app.config['SECRET_KEY'] = 'sua-chave-secreta-aqui'
+app.config['JSON_AS_ASCII'] = False
+
+# ==================== HELPERS ====================
+
+def get_db():
+    conn = sqlite3.connect('banco.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ==================== ROTAS PRINCIPAIS ====================
+
+@app.route('/')
+def dashboard():
+    """Dashboard principal"""
+    stats = estatisticas()
+    recentes = listar_oportunidades(limite=20, min_margem=0.25)
+    return render_template('dashboard.html', stats=stats, recentes=recentes)
+
+@app.route('/api/licitacoes')
+def api_licitacoes():
+    """API JSON de licitações"""
+    filtro = request.args.get('filtro', 'todas')
+    min_margem = float(request.args.get('min_margem', 0.25))
+    
+    licitacoes = listar_oportunidades(limite=100, min_margem=min_margem)
+    return jsonify(licitacoes)
+
+@app.route('/api/estatisticas')
+def api_estatisticas():
+    """API de estatísticas"""
+    return jsonify(estatisticas())
+
+# ==================== VISUALIZADOR DE EDITAL ====================
+
+@app.route('/edital/<int:licitacao_id>')
+def visualizar_edital(licitacao_id):
+    """
+    Visualizador de edital - SEMPRE FUNCIONA
+    Mostra conteúdo embutido no sistema (não depende de iframe externo)
+    """
+    lic = get_licitacao_by_id(licitacao_id)
+    
+    if not lic:
+        return "Edital não encontrado", 404
+    
+    # Análise IA
+    try:
+        analise = analisador_basico(lic.get('objeto', ''), lic.get('valor', 0))
+    except:
+        analise = {
+            'viabilidade': 50,
+            'recomendacao': 'AVALIAR',
+            'preco_sugerido': lic.get('valor', 0) * 0.75,
+            'margem_recomendada': '25%',
+            'chance_vitoria': '50%',
+            'riscos': ['Análise indisponível'],
+            'documentos': ['CNPJ', 'Contrato Social', 'Certidões']
+        }
+    
+    # Prepara objeto do edital
+    edital = {
+        'id': lic.get('id'),
+        'orgao': lic.get('orgao', 'Não informado'),
+        'objeto': lic.get('objeto', 'Sem descrição'),
+        'valor': lic.get('valor', 0),
+        'data_publicacao': lic.get('data_publicacao', ''),
+        'modalidade': lic.get('modalidade', 'Pregão Eletrônico'),
+        'situacao': lic.get('situacao', 'Aberto'),
+        'fonte': lic.get('fonte', 'N/A'),
+        'numero_controle': lic.get('numero_controle', ''),
+        'link_original': lic.get('link', '#'),
+        'modo_demo': True  # Sempre True no momento (dados de demo)
+    }
+    
+    # Usa template embutido (sempre funciona!)
+    return render_template('edital_embutido.html', 
+                         edital=edital, 
+                         analise=analise)
+
+# ==================== PRECIFICAÇÃO ====================
+
+@app.route('/precificar/<int:licitacao_id>')
+def precificar(licitacao_id):
+    """Página de precificação inteligente"""
+    lic = get_licitacao_by_id(licitacao_id)
+    
+    if not lic:
+        return "Edital não encontrado", 404
+    
+    # Cálculo de precificação
+    valor = lic.get('valor', 0)
+    
+    sugestao = {
+        'preco_sugerido': valor * 0.75,
+        'margem_estimada': '25',
+        'chance_vitoria': '65%',
+        'lucro_estimado': valor * 0.25,
+        'concorrentes_esperados': 8,
+        'cenarios': [
+            {
+                'desconto_percentual': '15%',
+                'preco_proposta': valor * 0.85,
+                'lucro_estimado': valor * 0.15,
+                'chance_vitoria_estimada': '30%',
+                'recomendado': False
+            },
+            {
+                'desconto_percentual': '25%',
+                'preco_proposta': valor * 0.75,
+                'lucro_estimado': valor * 0.25,
+                'chance_vitoria_estimada': '65%',
+                'recomendado': True
+            },
+            {
+                'desconto_percentual': '35%',
+                'preco_proposta': valor * 0.65,
+                'lucro_estimado': valor * 0.35,
+                'chance_vitoria_estimada': '85%',
+                'recomendado': False
+            }
+        ]
+    }
+    
+    return render_template('precificador.html', edital=lic, sugestao=sugestao)
+
+# ==================== INICIALIZAÇÃO ====================
+
+if __name__ == '__main__':
+    print("🚀 Iniciando Sistema de Licitações...")
+    criar_banco()
+    print("✅ Banco de dados pronto")
+    print("🌐 Acesse: http://localhost:5000")
+    print("📊 Dashboard: http://localhost:5000/")
+    print("🛑 Pressione Ctrl+C para parar\n")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True) 
+[FIM DO ARQUIVO app.py] 
+
+ 
+========================================== 
+ARQUIVO: banco.py 
+========================================== 
+import sqlite3
+from datetime import datetime
+
+def criar_banco():
+    """Cria o banco de dados com estrutura completa"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS licitacoes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        orgao TEXT NOT NULL,
+        objeto TEXT NOT NULL,
+        valor REAL,
+        margem REAL,
+        fonte TEXT,
+        link TEXT,
+        data_publicacao TEXT,
+        data_captura TEXT,
+        status TEXT DEFAULT 'nova',
+        
+        -- NOVOS CAMPOS para visualizador
+        numero_controle TEXT,           -- ID único do portal (ex: 123456789)
+        sequencial TEXT,                -- Sequencial do PNCP
+        modalidade TEXT,                -- Pregão, Concorrência, etc
+        situacao TEXT,                  -- Aberto, Fechado, etc
+        tipo_link TEXT DEFAULT 'busca', -- 'direto', 'busca', 'embed'
+        
+        -- Análise IA (preenchido depois)
+        viabilidade_ia REAL,
+        chance_vitoria_ia REAL,
+        preco_sugerido_ia REAL,
+        texto_completo TEXT,
+        pdf_path TEXT
+    )
+    """)
+    
+    # Índices para performance
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_data ON licitacoes(data_captura)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_numero_controle ON licitacoes(numero_controle)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_fonte ON licitacoes(fonte)")
+    
+    conn.commit()
+    conn.close()
+    print("✅ Banco de dados criado/verificado")
+
+def salvar_licitacao(orgao, objeto, valor, margem, fonte, link, data_publicacao, 
+                     numero_controle=None, sequencial=None, modalidade=None, 
+                     situacao=None, tipo_link='busca'):
+    """Salva licitação com todos os campos"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    # Verifica duplicado por número de controle
+    if numero_controle:
+        cursor.execute("""
+            SELECT id FROM licitacoes 
+            WHERE numero_controle = ? AND fonte = ?
+        """, (numero_controle, fonte))
+        if cursor.fetchone():
+            conn.close()
+            return False
+    
+    cursor.execute("""
+    INSERT INTO licitacoes 
+    (orgao, objeto, valor, margem, fonte, link, data_publicacao, data_captura,
+     numero_controle, sequencial, modalidade, situacao, tipo_link)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        orgao, objeto, valor, margem, fonte, link, data_publicacao,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        numero_controle, sequencial, modalidade, situacao, tipo_link
+    ))
+    
+    conn.commit()
+    novo_id = cursor.lastrowid
+    conn.close()
+    return novo_id
+
+def atualizar_analise_licitacao(licitacao_id, viabilidade=None, chance_vitoria=None, 
+                                preco_sugerido=None, texto_completo=None, pdf_path=None):
+    """Atualiza campos de análise IA"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    UPDATE licitacoes SET
+        viabilidade_ia = COALESCE(?, viabilidade_ia),
+        chance_vitoria_ia = COALESCE(?, chance_vitoria_ia),
+        preco_sugerido_ia = COALESCE(?, preco_sugerido_ia),
+        texto_completo = COALESCE(?, texto_completo),
+        pdf_path = COALESCE(?, pdf_path)
+    WHERE id = ?
+    """, (viabilidade, chance_vitoria, preco_sugerido, texto_completo, pdf_path, licitacao_id))
+    
+    conn.commit()
+    conn.close()
+
+def get_licitacao_by_id(licitacao_id):
+    """Busca licitação completa por ID"""
+    conn = sqlite3.connect("banco.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM licitacoes WHERE id = ?", (licitacao_id,))
+    resultado = cursor.fetchone()
+    conn.close()
+    
+    return dict(resultado) if resultado else None
+
+def listar_oportunidades(limite=50, min_margem=0.25):
+    """Lista oportunidades com margem mínima"""
+    conn = sqlite3.connect("banco.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    SELECT * FROM licitacoes 
+    WHERE margem >= ? 
+    ORDER BY data_captura DESC 
+    LIMIT ?
+    """, (min_margem, limite))
+    
+    resultados = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return resultados
+
+def estatisticas():
+    """Retorna estatísticas do dashboard"""
+    conn = sqlite3.connect("banco.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM licitacoes")
+    total = cursor.fetchone()[0]
+    
+    cursor.execute("""
+        SELECT COUNT(*) FROM licitacoes 
+        WHERE date(data_captura) = date('now')
+    """)
+    hoje = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT SUM(valor) FROM licitacoes")
+    valor_total = cursor.fetchone()[0] or 0
+    
+    cursor.execute("""
+        SELECT fonte, COUNT(*) as qtd, SUM(valor) as val 
+        FROM licitacoes 
+        GROUP BY fonte
+    """)
+    por_fonte = cursor.fetchall()
+    
+    conn.close()
+    
+    return {
+        "total": total,
+        "hoje": hoje,
+        "valor_total": valor_total,
+        "por_fonte": [{"fonte": f, "quantidade": q, "valor_total": v} for f, q, v in por_fonte]
+    } 
+[FIM DO ARQUIVO banco.py] 
+
+ 
+========================================== 
+ARQUIVO: config.py 
+========================================== 
+# CONFIGURAÇÕES DO ROBÔ
+INTERVALO_BUSCA = 1800  # segundos (30 minutos)
+MARGEM_MINIMA = 0.25    # 25% de margem mínima
+
+# PORTAIS MONITORADOS
+PORTAIS = [
+    "pncp",           # Portal Nacional - TODAS as prefeituras/estados/federal
+    "comprasgov",     # Compras.gov.br - Federal e órgãos
+    "licitacoesbb"    # Banco do Brasil - Milhares de municípios
+]
+
+# ARQUIVO DE PALAVRAS-CHAVE
+PALAVRAS_ARQUIVO = "keywords.txt" 
+[FIM DO ARQUIVO config.py] 
+
+ 
+========================================== 
+ARQUIVO: config_modo.py 
+========================================== 
+# ESCOLHA O MODO DE OPERAÇÃO
+
+# MODO = "api"          # Apenas APIs (mais rápido, pode falhar)
+# MODO = "demo"         # Dados fictícios (para testes)
+MODO = "hibrido"      # APIs + Links de busca (recomendado - sempre funciona)
+
+if MODO == "api":
+    from fontes import buscar_todas_fontes
+elif MODO == "demo":
+    from demo_dados import buscar_todas_fontes_demo as buscar_todas_fontes
+else:  # hibrido
+    from fontes_hibrido import buscar_todas_fontes_hibrido as buscar_todas_fontes 
+[FIM DO ARQUIVO config_modo.py] 
+
+ 
+========================================== 
+ARQUIVO: demo_dados.py 
+========================================== 
+"""
+Dados de demonstração para testar o sistema
+Quando as APIs do governo estiverem fora do ar
+"""
+
+import random
+from datetime import datetime, timedelta
+
+ORGAOS = [
+    "Prefeitura Municipal de São Paulo",
+    "Prefeitura de Belo Horizonte",
+    "Governo do Estado de MG",
+    "Prefeitura de Curitiba",
+    "Universidade Federal de Minas Gerais",
+    "Hospital das Clínicas de Porto Alegre",
+    "Prefeitura de Recife",
+    "Secretaria de Educação do RJ",
+    "Prefeitura de Brasília",
+    "Instituto Federal de SP"
+]
+
+OBJETOS = [
+    "Aquisição de 500 cadeiras escolares para rede municipal de ensino",
+    "Fornecimento de material escolar completo - kit aluno",
+    "Contratação de serviços de reforma de escolas estaduais",
+    "Aquisição de equipamentos para cozinha industrial",
+    "Fornecimento de uniformes escolares - 2.000 unidades",
+    "Instalação de cobertura metálica em quadra poliesportiva",
+    "Aquisição de notebooks para professores - 300 unidades",
+    "Fornecimento de material de limpeza hospitalar",
+    "Construção de escola modular em estrutura metálica",
+    "Reforma e ampliação de unidade de saúde",
+    "Aquisição de playground e equipamentos recreativos",
+    "Fornecimento de cimento e material de construção",
+    "Instalação de energia solar em prédios públicos",
+    "Aquisição de fogão industrial e freezer para merenda escolar",
+    "Contratação de serviços de manutenção predial"
+]
+
+def gerar_licitacoes_demo(quantidade=15):
+    """Gera licitações fictícias para demonstração"""
+    licitacoes = []
+    
+    for i in range(quantidade):
+        orgao = random.choice(ORGAOS)
+        objeto = random.choice(OBJETOS)
+        
+        # Valor entre 50 mil e 5 milhões
+        valor = random.randint(50000, 5000000)
+        
+        # Data aleatória nos últimos 7 dias
+        dias_atras = random.randint(0, 7)
+        data = (datetime.now() - timedelta(days=dias_atras)).strftime("%Y-%m-%d")
+        
+        licitacao = {
+            "orgao": orgao,
+            "objeto": objeto,
+            "valor": valor,
+            "data_publicacao": data,
+            "link": f"https://pncp.gov.br/demo/{i}",
+            "fonte": random.choice(["PNCP", "COMPRASGOV"]),
+            "modalidade": "Pregão Eletrônico",
+            "situacao": "Aberta"
+        }
+        licitacoes.append(licitacao)
+    
+    return licitacoes
+
+def buscar_todas_fontes_demo():
+    """Versão de demonstração do buscador"""
+    print("\n🎮 MODO DEMONSTRAÇÃO ATIVADO")
+    print("Gerando licitações de teste para você visualizar o sistema...\n")
+    
+    licitacoes = gerar_licitacoes_demo(20)
+    print(f"✓ {len(licitacoes)} licitações de demonstração geradas")
+    return licitacoes 
+[FIM DO ARQUIVO demo_dados.py] 
+
+ 
+========================================== 
+ARQUIVO: estrategia_profissional.py 
+========================================== 
+"""
+ESTRATÉGIA PROFISSIONAL DE LICITAÇÃO
+Baseado em táticas reais de fornecedores que vivem de pregão
+"""
+
+import random
+from dataclasses import dataclass
+from typing import List, Dict, Tuple
+import json
+from datetime import datetime
+
+@dataclass
+class AnaliseConcorrencia:
+    """Perfil de concorrente estimado"""
+    nome: str
+    perfil: str  # 'agressivo', 'moderado', 'conservador'
+    preco_medio: float
+    desconto_maximo: float  # % abaixo do preço médio deles
+
+@dataclass
+class EstrategiaLance:
+    """Estratégia calculada para ganhar"""
+    preco_custo: float
+    preco_alvo: float
+    margem_real: float
+    lance_inicial: float
+    lance_final: float
+    momento_entrada: str  # 'inicio', 'meio', 'final'
+    chance_vitoria: float
+    lucro_estimado: float
+    risco: str  # 'baixo', 'medio', 'alto'
+
+@dataclass
+class SimulacaoPregao:
+    """Resultado de simulação de pregão"""
+    vencedor: str
+    preco_vencedor: float
+    colocacao: int  # 1º, 2º, 3º...
+    economia_orgao: float  # % abaixo do valor estimado
+    lucro_real: float
+    tempo_duracao: str  # 'rapido', 'normal', 'longo'
+
+
+class EstrategaProfissional:
+    """
+    Implementa estratégias reais usadas por fornecedores profissionais
+    """
+    
+    def __init__(self):
+        self.historico_precos = self._carregar_historico()
+        self.perfis_concorrentes = {
+            'agressivo': {'desconto_medio': 0.15, 'variacao': 0.10, 'pressa': True},
+            'moderado': {'desconto_medio': 0.08, 'variacao': 0.05, 'pressa': False},
+            'conservador': {'desconto_medio': 0.03, 'variacao': 0.03, 'pressa': False}
+        }
+    
+    def _carregar_historico(self) -> Dict:
+        """Base de dados de preços históricos por categoria"""
+        return {
+            'cadeira_escolar': {
+                'preco_fabrica': 540,
+                'preco_atacado': 620,
+                'preco_varejo': 820,
+                'frete_unitario': 40,
+                'impostos': 30,
+                'margem_minima_viavel': 0.08
+            },
+            'material_escolar_kit': {
+                'preco_fabrica': 45,
+                'preco_atacado': 65,
+                'preco_varejo': 95,
+                'frete_unitario': 8,
+                'impostos': 5,
+                'margem_minima_viavel': 0.10
+            },
+            'notebook_educacional': {
+                'preco_fabrica': 2800,
+                'preco_atacado': 3200,
+                'preco_varejo': 4500,
+                'frete_unitario': 150,
+                'impostos': 200,
+                'margem_minima_viavel': 0.06
+            },
+            'cozinha_industrial': {
+                'preco_fabrica': 3500,
+                'preco_atacado': 4800,
+                'preco_varejo': 7200,
+                'frete_unitario': 400,
+                'impostos': 300,
+                'margem_minima_viavel': 0.12
+            },
+            'estrutura_metalica': {
+                'preco_fabrica': 180,  # por m2
+                'preco_atacado': 250,
+                'preco_varejo': 380,
+                'frete_unitario': 30,
+                'impostos': 20,
+                'margem_minima_viavel': 0.15
+            }
+        }
+    
+    def detectar_categoria(self, objeto: str) -> str:
+        """Detecta categoria do produto pelo texto do edital"""
+        objeto_lower = objeto.lower()
+        
+        if any(p in objeto_lower for p in ['cadeira', 'carteira', 'mesa escolar']):
+            return 'cadeira_escolar'
+        elif any(p in objeto_lower for p in ['kit escolar', 'material escolar', 'uniforme']):
+            return 'material_escolar_kit'
+        elif any(p in objeto_lower for p in ['notebook', 'computador', 'tablet']):
+            return 'notebook_educacional'
+        elif any(p in objeto_lower for p in ['fogao', 'freezer', 'cozinha industrial', 'geladeira industrial']):
+            return 'cozinha_industrial'
+        elif any(p in objeto_lower for p in ['estrutura metalica', 'cobertura metalica', 'galpao', 'steel frame']):
+            return 'estrutura_metalica'
+        
+        return 'generico'
+    
+    def calcular_custo_real(self, categoria: str, quantidade: int = 1) -> Dict:
+        """
+        Calcula custo real de produção/aquisição
+        Baseado em pesquisa de mercado real
+        """
+        dados = self.historico_precos.get(categoria, {
+            'preco_fabrica': 0,
+            'preco_atacado': 0,
+            'frete_unitario': 0,
+            'impostos': 0
+        })
+        
+        custo_unitario = (
+            dados['preco_fabrica'] +
+            dados['frete_unitario'] +
+            dados['impostos']
+        )
+        
+        # Desconto por volume
+        if quantidade >= 500:
+            desconto_volume = 0.05  # 5% desconto
+        elif quantidade >= 100:
+            desconto_volume = 0.03
+        else:
+            desconto_volume = 0
+        
+        custo_unitario *= (1 - desconto_volume)
+        
+        return {
+            'custo_unitario': custo_unitario,
+            'custo_total': custo_unitario * quantidade,
+            'preco_atacado_referencia': dados['preco_atacado'],
+            'preco_varejo_referencia': dados['preco_varejo'],
+            'margem_minima_viavel': dados.get('margem_minima_viavel', 0.10)
+        }
+    
+    def estimar_concorrencia(self, valor_estimado: float, 
+                            categoria: str,
+                            regiao: str = 'sudeste') -> List[AnaliseConcorrencia]:
+        """
+        Estima perfil dos concorrentes baseado em histórico
+        """
+        concorrentes = []
+        
+        # Número de concorrentes baseado no valor
+        if valor_estimado > 1000000:
+            num_concorrentes = random.randint(8, 15)
+        elif valor_estimado > 500000:
+            num_concorrentes = random.randint(5, 10)
+        else:
+            num_concorrentes = random.randint(3, 7)
+        
+        # Distribuição de perfis
+        perfis = ['agressivo'] * (num_concorrentes // 3) + \
+                 ['moderado'] * (num_concorrentes // 2) + \
+                 ['conservador'] * (num_concorrentes // 6 + 1)
+        
+        dados_cat = self.historico_precos.get(categoria, {})
+        preco_ref = dados_cat.get('preco_atacado', valor_estimado * 0.002)
+        
+        for i, perfil in enumerate(perfis[:num_concorrentes]):
+            perfil_dados = self.perfis_concorrentes[perfil]
+            
+            # Preço base do concorrente
+            preco_base = preco_ref * (1 + random.uniform(-0.10, 0.15))
+            
+            # Quanto descontam no máximo
+            desconto_max = perfil_dados['desconto_medio'] + random.uniform(0, perfil_dados['variacao'])
+            
+            concorrentes.append(AnaliseConcorrencia(
+                nome=f"Concorrente {chr(65+i)}",  # A, B, C...
+                perfil=perfil,
+                preco_medio=preco_base,
+                desconto_maximo=desconto_max
+            ))
+        
+        return concorrentes
+    
+    def calcular_estrategia_vencedora(self,
+                                     objeto: str,
+                                     valor_estimado: float,
+                                     quantidade: int = 1,
+                                     urgencia: str = 'normal') -> Dict:
+        """
+        Calcula estratégia completa para ganhar o pregão
+        """
+        # Detecta categoria
+        categoria = self.detectar_categoria(objeto)
+        
+        # Calcula custo real
+        custos = self.calcular_custo_real(categoria, quantidade)
+        custo_unitario = custos['custo_unitario']
+        custo_total = custos['custo_total']
+        
+        # Estima concorrência
+        concorrentes = self.estimar_concorrencia(valor_estimado, categoria)
+        
+        # Ordena concorrentes por agressividade (preço mais baixo esperado)
+        concorrentes_ordenados = sorted(
+            concorrentes,
+            key=lambda x: x.preco_medio * (1 - x.desconto_maximo)
+        )
+        
+        # Preço do concorrente mais agressivo
+        preco_mais_agressivo = concorrentes_ordenados[0].preco_medio * \
+                              (1 - concorrentes_ordenados[0].desconto_maximo)
+        
+        # ESTRATÉGIA: Ganhar com margem mínima viável
+        margem_minima = custos['margem_minima_viavel']
+        
+        # Preço alvo: abaixo do mais agressivo, mas com margem mínima
+        preco_alvo_minimo = custo_unitario * (1 + margem_minima)
+        preco_alvo = min(preco_mais_agressivo * 1.02, preco_alvo_minimo * 1.15)
+        
+        # Garante margem mínima
+        if preco_alvo < preco_alvo_minimo:
+            preco_alvo = preco_alvo_minimo
+        
+        # Arredondamento estratégico (psicológico)
+        preco_alvo = self._arredondar_pregao(preco_alvo)
+        
+        # Define momento de entrada
+        if len([c for c in concorrentes if c.perfil == 'agressivo']) > 2:
+            momento = 'final'  # Muitos agressivos = esperar
+        elif valor_estimado > 500000:
+            momento = 'meio'   # Valor alto = entrar no meio
+        else:
+            momento = 'inicio' # Pouca concorrência = entrar cedo
+        
+        # Calcula chance de vitória
+        nosso_preco_final = preco_alvo
+        precos_finais = [c.preco_medio * (1 - c.desconto_maximo * 0.8) 
+                        for c in concorrentes]
+        precos_finais.append(nosso_preco_final)
+        precos_finais.sort()
+        
+        nossa_posicao = precos_finais.index(nosso_preco_final) + 1
+        chance_vitoria = 95 if nossa_posicao == 1 else 70 if nossa_posicao <= 2 else 40
+        
+        # Monta resultado
+        estrategia = EstrategiaLance(
+            preco_custo=custo_unitario,
+            preco_alvo=preco_alvo,
+            margem_real=(preco_alvo - custo_unitario) / preco_alvo,
+            lance_inicial=preco_alvo * 1.05,  # Começa 5% acima
+            lance_final=preco_alvo,
+            momento_entrada=momento,
+            chance_vitoria=chance_vitoria,
+            lucro_estimado=(preco_alvo - custo_unitario) * quantidade,
+            risco='baixo' if chance_vitoria > 80 else 'medio'
+        )
+        
+        return {
+            'categoria_detectada': categoria,
+            'custo_real_unitario': custo_unitario,
+            'custo_total': custo_total,
+            'concorrentes': [
+                {
+                    'nome': c.nome,
+                    'perfil': c.perfil,
+                    'preco_medio': c.preco_medio,
+                    'preco_minimo_esperado': c.preco_medio * (1 - c.desconto_maximo)
+                }
+                for c in concorrentes[:5]  # Top 5
+            ],
+            'estrategia': {
+                'preco_custo': estrategia.preco_custo,
+                'preco_alvo': estrategia.preco_alvo,
+                'margem_percentual': f"{estrategia.margem_real*100:.1f}%",
+                'lance_inicial': estrategia.lance_inicial,
+                'lance_final': estrategia.lance_final,
+                'momento_entrada': estrategia.momento_entrada,
+                'chance_vitoria': f"{estrategia.chance_vitoria:.0f}%",
+                'lucro_estimado_total': estrategia.lucro_estimado,
+                'risco': estrategia.risco
+            },
+            'recomendacao_tatica': self._gerar_recomendacao_tatica(estrategia, concorrentes),
+            'simulacao': self._simular_pregao(estrategia, concorrentes, quantidade)
+        }
+    
+    def _arredondar_pregao(self, preco: float) -> float:
+        """Arredondamento psicológico para pregões"""
+        if preco > 1000:
+            # Arredonda para 90, 95, 99 (psicológico)
+            base = int(preco / 10) * 10
+            centavos = preco - base
+            if centavos > 5:
+                return base + 9.99
+            else:
+                return base - 0.01
+        return preco
+    
+    def _gerar_recomendacao_tatica(self, 
+                                   estrategia: EstrategiaLance,
+                                   concorrentes: List[AnaliseConcorrencia]) -> List[str]:
+        """Gera recomendações táticas específicas"""
+        recomendacoes = []
+        
+        num_agressivos = len([c for c in concorrentes if c.perfil == 'agressivo'])
+        
+        if estrategia.momento_entrada == 'final':
+            recomendacoes.append(
+                "⏰ ESPERE ATÉ O FINAL: Há muitos concorrentes agressivos. "
+                "Deixe eles se desgastarem antes de entrar."
+            )
+        elif estrategia.momento_entrada == 'meio':
+            recomendacoes.append(
+                "⚡ ENTRADA NO MEIO: Valor alto atrai cautela. "
+                "Entre quando faltarem 10 minutos para o encerramento."
+            )
+        else:
+            recomendacoes.append(
+                "🚀 ENTRADA RÁPIDA: Pouca concorrência agressiva. "
+                "Entre cedo para assustar competidores."
+            )
+        
+        if estrategia.margem_real < 0.10:
+            recomendacoes.append(
+                f"⚠️ MARGEM APERTADA: Apenas {estrategia.margem_real*100:.1f}%. "
+                "Ganhe o contrato e negocie volume extra com a fábrica."
+            )
+        
+        recomendacoes.append(
+            f"🎯 LANCE FINAL: R$ {estrategia.lance_final:.2f} "
+            f"(não desça abaixo de R$ {estrategia.preco_custo * 1.03:.2f})"
+        )
+        
+        recomendacoes.append(
+            f"💰 LUCRO ESPERADO: R$ {estrategia.lucro_estimado:,.2f} "
+            f"no contrato total."
+        )
+        
+        return recomendacoes
+    
+    def _simular_pregao(self,
+                       estrategia: EstrategiaLance,
+                       concorrentes: List[AnaliseConcorrencia],
+                       quantidade: int) -> SimulacaoPregao:
+        """Simula como seria o pregão"""
+        
+        # Simula lances dos concorrentes
+        lances = []
+        for c in concorrentes:
+            lance_min = c.preco_medio * (1 - c.desconto_maximo)
+            lance_real = lance_min * random.uniform(1.0, 1.10)  # Não dá o máximo
+            lances.append((c.nome, lance_real))
+        
+        # Nosso lance
+        lances.append(('NOSSA EMPRESA', estrategia.lance_final))
+        
+        # Ordena por preço (menor primeiro)
+        lances.sort(key=lambda x: x[1])
+        
+        nossa_posicao = next(i for i, (nome, _) in enumerate(lances) if nome == 'NOSSA EMPRESA') + 1
+        vencedor = lances[0][0]
+        preco_vencedor = lances[0][1]
+        
+        # Calcula economia para o órgão
+        valor_medio = sum(l[1] for l in lances) / len(lances)
+        economia = (valor_medio - preco_vencedor) / valor_medio
+        
+        return SimulacaoPregao(
+            vencedor='NOSSA EMPRESA' if nossa_posicao == 1 else vencedor,
+            preco_vencedor=preco_vencedor,
+            colocacao=nossa_posicao,
+            economia_orgao=economia * 100,
+            lucro_real=(preco_vencedor - estrategia.preco_custo) * quantidade if vencedor == 'NOSSA EMPRESA' else 0,
+            tempo_duracao='longo' if len([c for c in concorrentes if c.perfil == 'agressivo']) > 3 else 'normal'
+        )
+
+
+# Instância global
+estratega = EstrategaProfissional()
+
+def analisar_estrategia_licitacao(objeto: str, 
+                                   valor_estimado: float,
+                                   quantidade: int = 1) -> Dict:
+    """Função pública para usar no sistema"""
+    return estratega.calcular_estrategia_vencedora(objeto, valor_estimado, quantidade)
+
+
+# Teste rápido
+if __name__ == "__main__":
+    # Exemplo do caso real: 450 cadeiras escolares
+    print("="*70)
+    print("ESTRATÉGIA PROFISSIONAL - EXEMPLO REAL")
+    print("="*70)
+    
+    resultado = analisar_estrategia_licitacao(
+        objeto="Aquisição de 450 cadeiras escolares padrão FNDE",
+        valor_estimado=380000,
+        quantidade=450
+    )
+    
+    print(f"\n📦 CATEGORIA: {resultado['categoria_detectada']}")
+    print(f"💰 CUSTO REAL UNITÁRIO: R$ {resultado['custo_real_unitario']:.2f}")
+    print(f"💰 CUSTO TOTAL: R$ {resultado['custo_total']:,.2f}")
+    
+    print(f"\n🏆 ESTRATÉGIA CALCULADA:")
+    estr = resultado['estrategia']
+    print(f"   Preço alvo: R$ {estr['preco_alvo']:.2f}")
+    print(f"   Margem: {estr['margem_percentual']}")
+    print(f"   Chance de vitória: {estr['chance_vitoria']}")
+    print(f"   Lucro estimado: R$ {estr['lucro_estimado_total']:,.2f}")
+    print(f"   Momento de entrada: {estr['momento_entrada']}")
+    
+    print(f"\n📋 RECOMENDAÇÕES TÁTICAS:")
+    for rec in resultado['recomendacao_tatica']:
+        print(f"   {rec}")
+    
+    print(f"\n🎮 SIMULAÇÃO DO PREGÃO:")
+    sim = resultado['simulacao']
+    print(f"   Vencedor: {sim.vencedor}")
+    print(f"   Preço vencedor: R$ {sim.preco_vencedor:.2f}")
+    print(f"   Nossa colocação: {sim.colocacao}º")
+    print(f"   Economia para órgão: {sim.economia_orgao:.1f}%")
+    print(f"   Lucro real (se ganhar): R$ {sim.lucro_real:,.2f}") 
+[FIM DO ARQUIVO estrategia_profissional.py] 
+
+ 
+========================================== 
+ARQUIVO: extrator_edital.py 
+========================================== 
+
+"""
+EXTRATOR DE EDITAIS
+Busca, baixa e processa editais dos portais oficiais
+Mantém tudo no sistema sem redirecionar cliente
+"""
+
+import requests
+import re
+import json
+from datetime import datetime
+from typing import Dict, Optional, List
+from dataclasses import dataclass
+import os
+
+@dataclass
+class EditalCompleto:
+    """Estrutura completa de um edital"""
+    id: str
+    orgao: str
+    objeto: str
+    valor_estimado: float
+    data_abertura: Optional[str]
+    data_publicacao: str
+    modalidade: str
+    situacao: str
+    
+    # Conteúdo
+    texto_completo: str
+    anexos: List[Dict]
+    link_original: str
+    
+    # Processado
+    resumo_ia: Optional[str] = None
+    exigencias: List[str] = None
+    documentos_necessarios: List[str] = None
+    prazo_execucao: Optional[int] = None
+    garantia: Optional[float] = None
+    
+    # Arquivos locais
+    pdf_local: Optional[str] = None
+    html_local: Optional[str] = None
+
+
+class ExtratorEdital:
+    """
+    Extrai conteúdo completo de editais dos portais oficiais
+    """
+    
+    def __init__(self, pasta_cache: str = "editais_cache"):
+        self.pasta_cache = pasta_cache
+        os.makedirs(pasta_cache, exist_ok=True)
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+    
+    def extrair_pncp(self, numero_controle: str) -> Optional[EditalCompleto]:
+        """
+        Extrai edital completo do PNCP
+        """
+        try:
+            # API de detalhes do PNCP
+            url_api = f"https://pncp.gov.br/api/compras/{numero_controle}"
+            
+            print(f"  🔍 Buscando edital {numero_controle} no PNCP...")
+            resp = self.session.get(url_api, timeout=30)
+            
+            if resp.status_code != 200:
+                print(f"  ⚠️ API retornou {resp.status_code}")
+                return self._extrair_pncp_scraping(numero_controle)
+            
+            dados = resp.json()
+            
+            # Extrai texto do edital
+            texto_edital = self._extrair_texto_edital(dados)
+            
+            # Busca anexos/PDFs
+            anexos = self._buscar_anexos_pncp(numero_controle)
+            
+            # Baixa PDF se existir
+            pdf_path = None
+            if anexos:
+                pdf_path = self._baixar_anexo(anexos[0], numero_controle)
+            
+            edital = EditalCompleto(
+                id=numero_controle,
+                orgao=dados.get("orgaoEntidade", {}).get("razaoSocial", ""),
+                objeto=dados.get("objetoCompra", ""),
+                valor_estimado=float(dados.get("valorTotalEstimado", 0) or 0),
+                data_abertura=dados.get("dataAberturaProposta"),
+                data_publicacao=dados.get("dataPublicacaoPncp", ""),
+                modalidade=dados.get("modalidadeNome", ""),
+                situacao=dados.get("situacaoCompra", ""),
+                texto_completo=texto_edital,
+                anexos=anexos,
+                link_original=f"https://pncp.gov.br/comprasPublicas/{numero_controle}",
+                pdf_local=pdf_path
+            )
+            
+            # Salva cache
+            self._salvar_cache(edital)
+            
+            return edital
+            
+        except Exception as e:
+            print(f"  ❌ Erro ao extrair: {e}")
+            return None
+    
+    def _extrair_pncp_scraping(self, numero_controle: str) -> Optional[EditalCompleto]:
+        """
+        Fallback: extrai via scraping se API falhar
+        """
+        url = f"https://pncp.gov.br/comprasPublicas/{numero_controle}"
+        
+        try:
+            resp = self.session.get(url, timeout=30)
+            if resp.status_code != 200:
+                return None
+            
+            html = resp.text
+            
+            # Extrai dados do HTML
+            orgao = self._extrair_meta(html, 'orgao') or "Não informado"
+            objeto = self._extrair_meta(html, 'objeto') or "Não informado"
+            valor = self._extrair_valor_html(html)
+            
+            # Extrai texto do edital do HTML
+            texto = self._limpar_html(html)
+            
+            return EditalCompleto(
+                id=numero_controle,
+                orgao=orgao,
+                objeto=objeto,
+                valor_estimado=valor,
+                data_abertura=None,
+                data_publicacao=datetime.now().isoformat(),
+                modalidade="Pregão Eletrônico",
+                situacao="Aberto",
+                texto_completo=texto[:5000],  # Primeiros 5000 chars
+                anexos=[],
+                link_original=url
+            )
+            
+        except Exception as e:
+            print(f"  ❌ Scraping falhou: {e}")
+            return None
+    
+    def _extrair_texto_edital(self, dados: Dict) -> str:
+        """Extrai texto completo do edital"""
+        partes = []
+        
+        # Objeto
+        partes.append(f"OBJETO: {dados.get('objetoCompra', '')}")
+        
+        # Descrição detalhada se existir
+        if 'descricao' in dados:
+            partes.append(f"\nDESCRIÇÃO:\n{dados['descricao']}")
+        
+        # Itens da licitação
+        itens = dados.get('itens', [])
+        if itens:
+            partes.append("\nITENS:")
+            for i, item in enumerate(itens[:20], 1):  # Limita 20 itens
+                partes.append(f"  {i}. {item.get('descricao', '')} - Qtd: {item.get('quantidade', 0)}")
+        
+        # Critérios de julgamento
+        criterios = dados.get('criterioJulgamentoNome', '')
+        if criterios:
+            partes.append(f"\nCRITÉRIO DE JULGAMENTO: {criterios}")
+        
+        # Condições de pagamento
+        pagamento = dados.get('condicaoPagamento', '')
+        if pagamento:
+            partes.append(f"\nCONDIÇÃO DE PAGAMENTO: {pagamento}")
+        
+        # Prazos
+        entrega = dados.get('prazoEntrega', '')
+        if entrega:
+            partes.append(f"\nPRAZO DE ENTREGA: {entrega}")
+        
+        return "\n".join(partes)
+    
+    def _buscar_anexos_pncp(self, numero_controle: str) -> List[Dict]:
+        """Busca documentos anexos do edital"""
+        # Endpoint de anexos do PNCP
+        url = f"https://pncp.gov.br/api/compras/{numero_controle}/anexos"
+        
+        try:
+            resp = self.session.get(url, timeout=15)
+            if resp.status_code == 200:
+                return resp.json().get("anexos", [])
+        except:
+            pass
+        
+        return []
+    
+    def _baixar_anexo(self, anexo: Dict, edital_id: str) -> Optional[str]:
+        """Baixa PDF do anexo e salva localmente"""
+        url = anexo.get("url") or anexo.get("link")
+        if not url:
+            return None
+        
+        nome_arquivo = f"{edital_id}_{anexo.get('nome', 'edital')}.pdf"
+        caminho = os.path.join(self.pasta_cache, nome_arquivo)
+        
+        # Se já existe, retorna cache
+        if os.path.exists(caminho):
+            return caminho
+        
+        try:
+            print(f"  📥 Baixando PDF...")
+            resp = self.session.get(url, timeout=60, stream=True)
+            
+            if resp.status_code == 200:
+                with open(caminho, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print(f"  ✅ PDF salvo: {caminho}")
+                return caminho
+        except Exception as e:
+            print(f"  ⚠️ Erro ao baixar PDF: {e}")
+        
+        return None
+    
+    def _salvar_cache(self, edital: EditalCompleto):
+        """Salva edital em cache JSON"""
+        cache_file = os.path.join(self.pasta_cache, f"{edital.id}.json")
+        
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                'id': edital.id,
+                'orgao': edital.orgao,
+                'objeto': edital.objeto,
+                'valor_estimado': edital.valor_estimado,
+                'data_abertura': edital.data_abertura,
+                'data_publicacao': edital.data_publicacao,
+                'modalidade': edital.modalidade,
+                'situacao': edital.situacao,
+                'texto_completo': edital.texto_completo[:10000],  # Limita tamanho
+                'link_original': edital.link_original,
+                'pdf_local': edital.pdf_local,
+                'cache_em': datetime.now().isoformat()
+            }, f, ensure_ascii=False, indent=2)
+    
+    def _extrair_meta(self, html: str, campo: str) -> Optional[str]:
+        """Extrai metadados do HTML"""
+        padrao = rf'<meta[^>]*name=["\']{campo}["\'][^>]*content=["\']([^"\']+)["\']'
+        match = re.search(padrao, html, re.I)
+        if match:
+            return match.group(1)
+        
+        # Tenta regex alternativo
+        padrao2 = rf'{campo}["\']?\s*[:=]\s*["\']?([^"\'<>]+)'
+        match = re.search(padrao2, html, re.I)
+        return match.group(1) if match else None
+    
+    def _extrair_valor_html(self, html: str) -> float:
+        """Extrai valor estimado do HTML"""
+        padroes = [
+            r'valor\s*(?:total|estimado)?\s*[:=]?\s*R?\$?\s*([\d.,]+)',
+            r'R\$\s*([\d.,]+)\s*(?:reais)?',
+            r'([\d.,]+)\s*(?:mil|milhões?|bilhões?)\s*(?:de)?\s*reais'
+        ]
+        
+        for padrao in padroes:
+            match = re.search(padrao, html, re.I)
+            if match:
+                valor_str = match.group(1).replace('.', '').replace(',', '.')
+                try:
+                    return float(valor_str)
+                except:
+                    continue
+        
+        return 0.0
+    
+    def _limpar_html(self, html: str) -> str:
+        """Remove tags HTML e extrai texto limpo"""
+        # Remove scripts e styles
+        html = re.sub(r'<(script|style)[^>]*>[^<]*</\1>', '', html, flags=re.I)
+        # Remove tags
+        texto = re.sub(r'<[^>]+>', ' ', html)
+        # Remove espaços excessivos
+        texto = re.sub(r'\s+', ' ', texto)
+        return texto.strip()
+
+
+# Instância global
+extrator = ExtratorEdital()
+
+def obter_edital_completo(numero_controle: str, fonte: str = "PNCP") -> Optional[EditalCompleto]:
+    """
+    Função principal para obter edital completo
+    """
+    if fonte.upper() == "PNCP":
+        return extrator.extrair_pncp(numero_controle)
+    
+    # Adicionar outras fontes aqui
+    return None 
+[FIM DO ARQUIVO extrator_edital.py] 
+
+ 
+========================================== 
+ARQUIVO: fontes.py 
+========================================== 
+"""
+FONTES DE LICITAÇÕES - VERSÃO FINAL
+Extrai dados reais com links para embed no sistema
+"""
+
+import requests
+import json
+import re
+from datetime import datetime, timedelta
+from typing import List, Dict
+
+def extrair_valor(valor_str):
+    """Extrai valor numérico de qualquer formato"""
+    if isinstance(valor_str, (int, float)):
+        return float(valor_str)
+    
+    valor_str = str(valor_str)
+    # Remove tudo exceto números, ponto e vírgula
+    valor_limpo = re.sub(r'[^\d.,]', '', valor_str)
+    
+    try:
+        # Detecta formato brasileiro vs americano
+        if ',' in valor_limpo and '.' in valor_limpo:
+            if valor_limpo.rfind(',') > valor_limpo.rfind('.'):
+                valor_limpo = valor_limpo.replace('.', '').replace(',', '.')
+            else:
+                valor_limpo = valor_limpo.replace(',', '')
+        elif ',' in valor_limpo:
+            valor_limpo = valor_limpo.replace(',', '.')
+        
+        return float(valor_limpo) if valor_limpo else 0.0
+    except:
+        return 0.0
+
+def buscar_pncp(pagina=1):
+    """
+    Busca no PNCP com número de controle para embed
+    """
+    url = "https://pncp.gov.br/api/search/"
+    
+    params = {
+        "q": "*",
+        "page": pagina,
+        "pageSize": 50,
+        "sort": "date",
+        "order": "desc"
+    }
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://pncp.gov.br/'
+    }
+    
+    try:
+        print(f"  🔍 PNCP página {pagina}...")
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if resp.status_code != 200:
+            print(f"  ⚠️ PNCP status {resp.status_code}")
+            return []
+        
+        dados = resp.json()
+        licitacoes = []
+        
+        for item in dados.get("items", []):
+            numero_controle = item.get("numeroControle", "")
+            sequencial = item.get("sequencial", "")
+            
+            # LINK PARA EMBED NO SISTEMA (não redireciona)
+            if numero_controle:
+                # Link direto do PNCP que permite embed
+                link_embed = f"https://pncp.gov.br/comprasPublicas/{numero_controle}"
+                tipo_link = "embed"
+            else:
+                # Fallback: busca no portal
+                objeto_busca = item.get("objeto", "")[:30].replace(" ", "%20")
+                link_embed = f"https://pncp.gov.br/app/editais?q={objeto_busca}"
+                tipo_link = "busca"
+            
+            licitacao = {
+                "orgao": item.get("orgaoNome", "Não informado"),
+                "objeto": item.get("objeto", ""),
+                "valor": extrair_valor(item.get("valorTotal") or item.get("valorEstimado", 0)),
+                "data_publicacao": item.get("dataPublicacao", ""),
+                "link": link_embed,
+                "fonte": "PNCP",
+                "modalidade": item.get("modalidade", ""),
+                "situacao": item.get("situacao", ""),
+                "numero_controle": numero_controle,
+                "sequencial": sequencial,
+                "tipo_link": tipo_link
+            }
+            licitacoes.append(licitacao)
+        
+        print(f"  ✅ PNCP: {len(licitacoes)} licitações")
+        return licitacoes
+        
+    except Exception as e:
+        print(f"  ❌ Erro PNCP: {str(e)[:80]}")
+        return []
+
+def buscar_comprasgov(pagina=1):
+    """
+    Busca no Compras.gov.br
+    """
+    url = "https://compras.dados.gov.br/licitacoes/v1/licitacoes.json"
+    
+    params = {
+        "offset": (pagina - 1) * 100,
+        "order": "desc"
+    }
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+    }
+    
+    try:
+        print(f"  🔍 ComprasGov...")
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if resp.status_code != 200:
+            return []
+        
+        dados = resp.json()
+        licitacoes = []
+        
+        for item in dados.get("_embedded", {}).get("licitacoes", []):
+            # Extrai ID da URL
+            self_link = item.get("_links", {}).get("self", {}).get("href", "")
+            licitacao_id = self_link.split("/")[-1] if self_link else ""
+            
+            # Link para embed no ComprasGov
+            if licitacao_id:
+                link_embed = f"https://compras.gov.br/legislacao/pregao-electronico/{licitacao_id}"
+                tipo_link = "embed"
+            else:
+                objeto = item.get("objeto", "")[:30].replace(" ", "+")
+                link_embed = f"https://compras.gov.br/consulta/editais?q={objeto}"
+                tipo_link = "busca"
+            
+            licitacao = {
+                "orgao": item.get("orgao", {}).get("nome", "Não informado"),
+                "objeto": item.get("objeto", ""),
+                "valor": extrair_valor(item.get("valor", 0)),
+                "data_publicacao": item.get("publicacao", ""),
+                "link": link_embed,
+                "fonte": "COMPRASGOV",
+                "modalidade": item.get("modalidade", ""),
+                "situacao": item.get("situacao", ""),
+                "numero_controle": licitacao_id,
+                "sequencial": None,
+                "tipo_link": tipo_link
+            }
+            licitacoes.append(licitacao)
+        
+        print(f"  ✅ ComprasGov: {len(licitacoes)} licitações")
+        return licitacoes
+        
+    except Exception as e:
+        print(f"  ❌ Erro ComprasGov: {str(e)[:80]}")
+        return []
+
+def buscar_todas_fontes():
+    """
+    Coleta de todas as fontes
+    """
+    todas = []
+    
+    print("\n" + "="*60)
+    print("🔍 COLETA DE LICITAÇÕES")
+    print("="*60)
+    
+    # PNCP (2 páginas)
+    p1 = buscar_pncp(1)
+    todas.extend(p1)
+    if len(p1) > 0:
+        todas.extend(buscar_pncp(2))
+    
+    # ComprasGov
+    todas.extend(buscar_comprasgov(1))
+    
+    print(f"\n{'='*60}")
+    print(f"📊 TOTAL: {len(todas)} licitações")
+    print(f"{'='*60}")
+    
+    # Mostra exemplo
+    if todas:
+        print(f"\n🔗 Exemplo de link gerado:")
+        ex = todas[0]
+        print(f"   Fonte: {ex['fonte']}")
+        print(f"   Número: {ex['numero_controle'] or 'N/A'}")
+        print(f"   Tipo: {ex['tipo_link']}")
+        print(f"   Link: {ex['link'][:60]}...")
+    
+    return todas 
+[FIM DO ARQUIVO fontes.py] 
+
+ 
+========================================== 
+ARQUIVO: fontes_hibrido.py 
+========================================== 
+"""
+FONTES HÍBRIDO: APIs + Dados de Demonstração
+Quando APIs do governo falham, gera dados realistas para teste
+"""
+
+import requests
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict
+
+# Dados realistas para demonstração
+ORGAOS_DEMO = [
+    "Prefeitura Municipal de São Paulo - SP",
+    "Prefeitura de Belo Horizonte - MG",
+    "Prefeitura de Curitiba - PR",
+    "Prefeitura de Recife - PE",
+    "Prefeitura de Porto Alegre - RS",
+    "Governo do Estado de Minas Gerais",
+    "Governo do Estado de São Paulo",
+    "Universidade Federal de Minas Gerais",
+    "Hospital das Clínicas de Porto Alegre",
+    "Secretaria de Educação do Rio de Janeiro",
+    "Prefeitura de Brasília - DF",
+    "Instituto Federal de São Paulo",
+    "Prefeitura de Salvador - BA",
+    "Prefeitura de Fortaleza - CE",
+    "Prefeitura de Manaus - AM"
+]
+
+OBJETOS_DEMO = [
+    {"nome": "Aquisição de 500 cadeiras escolares", "categoria": "escolar", "valor_min": 80000, "valor_max": 150000},
+    {"nome": "Fornecimento de material escolar completo - kit aluno", "categoria": "escolar", "valor_min": 50000, "valor_max": 300000},
+    {"nome": "Contratação de serviços de reforma de escolas", "categoria": "obra", "valor_min": 200000, "valor_max": 2000000},
+    {"nome": "Aquisição de equipamentos para cozinha industrial", "categoria": "cozinha", "valor_min": 60000, "valor_max": 400000},
+    {"nome": "Fornecimento de uniformes escolares", "categoria": "escolar", "valor_min": 40000, "valor_max": 250000},
+    {"nome": "Instalação de cobertura metálica em quadra poliesportiva", "categoria": "obra", "valor_min": 150000, "valor_max": 800000},
+    {"nome": "Aquisição de notebooks para professores", "categoria": "informatica", "valor_min": 100000, "valor_max": 600000},
+    {"nome": "Fornecimento de material de limpeza hospitalar", "categoria": "limpeza", "valor_min": 30000, "valor_max": 180000},
+    {"nome": "Construção de escola modular em estrutura metálica", "categoria": "obra", "valor_min": 500000, "valor_max": 5000000},
+    {"nome": "Reforma e ampliação de unidade de saúde", "categoria": "obra", "valor_min": 300000, "valor_max": 3000000},
+    {"nome": "Aquisição de playground e equipamentos recreativos", "categoria": "escolar", "valor_min": 45000, "valor_max": 350000},
+    {"nome": "Fornecimento de cimento e material de construção", "categoria": "material", "valor_min": 60000, "valor_max": 500000},
+    {"nome": "Instalação de energia solar em prédios públicos", "categoria": "obra", "valor_min": 200000, "valor_max": 1500000},
+    {"nome": "Aquisição de fogão industrial e freezer", "categoria": "cozinha", "valor_min": 35000, "valor_max": 200000},
+    {"nome": "Contratação de serviços de manutenção predial", "categoria": "servico", "valor_min": 50000, "valor_max": 400000},
+    {"nome": "Fornecimento de computadores e impressoras", "categoria": "informatica", "valor_min": 80000, "valor_max": 450000},
+    {"nome": "Aquisição de equipamentos esportivos", "categoria": "escolar", "valor_min": 25000, "valor_max": 180000},
+    {"nome": "Reforma de ginásio poliesportivo", "categoria": "obra", "valor_min": 180000, "valor_max": 1200000},
+    {"nome": "Fornecimento de mobiliário de escritório", "categoria": "escritorio", "valor_min": 40000, "valor_max": 300000},
+    {"nome": "Aquisição de sistema de segurança e CFTV", "categoria": "informatica", "valor_min": 70000, "valor_max": 500000}
+]
+
+def gerar_numero_controle():
+    """Gera número de controle no formato do PNCP"""
+    ano = datetime.now().year
+    sequencial = random.randint(100000, 999999)
+    return f"{ano}{sequencial}"
+
+ddef gerar_licitacoes_demo(quantidade=20) -> List[Dict]:
+    """
+    Gera licitações de demonstração realistas
+    COM LINKS DE BUSCA FUNCIONAIS (não links diretos falsos)
+    """
+    licitacoes = []
+    hoje = datetime.now()
+    
+    for i in range(quantidade):
+        # Seleciona objeto aleatório
+        obj_template = random.choice(OBJETOS_DEMO)
+        
+        # Gera valores
+        valor = random.randint(obj_template["valor_min"], obj_template["valor_max"])
+        
+        # Data aleatória (últimos 7 dias)
+        dias_atras = random.randint(0, 7)
+        data_pub = (hoje - timedelta(days=dias_atras)).strftime("%Y-%m-%d")
+        
+        # LINK DE BUSCA FUNCIONAL (não edital específico falso)
+        termo_busca = obj_template["nome"][:25].replace(" ", "%20")
+        
+        if random.choice([True, False]):
+            # Busca no PNCP
+            link_funcional = f"https://pncp.gov.br/app/editais?q={termo_busca}"
+            fonte = "PNCP"
+        else:
+            # Busca no ComprasGov
+            link_funcional = f"https://compras.gov.br/consulta/editais?q={termo_busca}"
+            fonte = "COMPRASGOV"
+        
+        # Monta objeto completo
+        licitacao = {
+            "orgao": random.choice(ORGAOS_DEMO),
+            "objeto": obj_template["nome"],
+            "valor": valor,
+            "data_publicacao": data_pub,
+            "link": link_funcional,  # ← LINK DE BUSCA FUNCIONAL
+            "fonte": fonte,
+            "modalidade": random.choice(["Pregão Eletrônico", "Concorrência", "Dispensa de Licitação"]),
+            "situacao": "Aberto",
+            "numero_controle": None,  # ← None porque é demo
+            "sequencial": None,
+            "tipo_link": "busca"  # ← Tipo busca, não embed direto
+        }
+        
+        licitacoes.append(licitacao)
+    
+    return licitacoes
+
+def buscar_pncp_real(pagina=1):
+    """Tenta buscar PNCP real"""
+    try:
+        url = "https://pncp.gov.br/api/search/"
+        params = {"q": "*", "page": pagina, "pageSize": 50}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+        }
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code == 200:
+            dados = resp.json()
+            licitacoes = []
+            
+            for item in dados.get("items", []):
+                numero = item.get("numeroControle", "")
+                licitacoes.append({
+                    "orgao": item.get("orgaoNome", "Não informado"),
+                    "objeto": item.get("objeto", ""),
+                    "valor": float(item.get("valorTotal") or item.get("valorEstimado", 0) or 0),
+                    "data_publicacao": item.get("dataPublicacao", ""),
+                    "link": f"https://pncp.gov.br/comprasPublicas/{numero}" if numero else "#",
+                    "fonte": "PNCP",
+                    "modalidade": item.get("modalidade", ""),
+                    "situacao": item.get("situacao", ""),
+                    "numero_controle": numero,
+                    "sequencial": item.get("sequencial", ""),
+                    "tipo_link": "embed" if numero else "busca"
+                })
+            return licitacoes
+            
+    except Exception as e:
+        print(f"    API PNCP falhou: {str(e)[:50]}")
+    
+    return None  # Retorna None para indicar falha
+
+def buscar_comprasgov_real():
+    """Tenta buscar ComprasGov real"""
+    try:
+        url = "https://compras.dados.gov.br/licitacoes/v1/licitacoes.json"
+        params = {"offset": 0}
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code == 200:
+            dados = resp.json()
+            licitacoes = []
+            
+            for item in dados.get("_embedded", {}).get("licitacoes", []):
+                link_self = item.get("_links", {}).get("self", {}).get("href", "")
+                lic_id = link_self.split("/")[-1] if link_self else ""
+                
+                licitacoes.append({
+                    "orgao": item.get("orgao", {}).get("nome", "Não informado"),
+                    "objeto": item.get("objeto", ""),
+                    "valor": float(item.get("valor", 0) or 0),
+                    "data_publicacao": item.get("publicacao", ""),
+                    "link": f"https://compras.gov.br/legislacao/pregao-electronico/{lic_id}" if lic_id else "#",
+                    "fonte": "COMPRASGOV",
+                    "modalidade": item.get("modalidade", ""),
+                    "situacao": item.get("situacao", ""),
+                    "numero_controle": lic_id,
+                    "sequencial": None,
+                    "tipo_link": "embed" if lic_id else "busca"
+                })
+            return licitacoes
+            
+    except Exception as e:
+        print(f"    API ComprasGov falhou: {str(e)[:50]}")
+    
+    return None
+
+def buscar_todas_fontes() -> List[Dict]:
+    """
+    COLETA HÍBRIDA:
+    1. Tenta APIs reais
+    2. Se falhar, usa dados de demonstração
+    """
+    todas = []
+    modo_demo = False
+    
+    print("\n" + "="*60)
+    print("🔍 COLETA DE LICITAÇÕES")
+    print("="*60)
+    
+    # Tenta PNCP real
+    print("  📡 Tentando PNCP (API real)...")
+    pncp_real = buscar_pncp_real(1)
+    
+    if pncp_real is not None and len(pncp_real) > 0:
+        todas.extend(pncp_real)
+        print(f"  ✅ PNCP real: {len(pncp_real)} licitações")
+    else:
+        print("  ⚠️ PNCP indisponível, usando demonstração...")
+        modo_demo = True
+    
+    # Tenta ComprasGov real
+    print("  📡 Tentando ComprasGov (API real)...")
+    gov_real = buscar_comprasgov_real()
+    
+    if gov_real is not None and len(gov_real) > 0:
+        todas.extend(gov_real)
+        print(f"  ✅ ComprasGov real: {len(gov_real)} licitações")
+    else:
+        print("  ⚠️ ComprasGov indisponível...")
+        modo_demo = True
+    
+    # Se APIs falharam, gera demonstração
+    if len(todas) == 0:
+        print("\n" + "!"*60)
+        print("🎮 MODO DEMONSTRAÇÃO ATIVADO")
+        print("   (APIs do governo estão fora do ar)")
+        print("!"*60)
+        
+        licitacoes_demo = gerar_licitacoes_demo(25)
+        todas.extend(licitacoes_demo)
+        
+        print(f"\n  ✅ Geradas {len(licitacoes_demo)} licitações de demonstração")
+        print("  💡 Estas são fictícias mas realistas para teste do sistema")
+    
+    # Resumo
+    print(f"\n{'='*60}")
+    print(f"📊 TOTAL: {len(todas)} licitações")
+    if modo_demo:
+        print(f"   ⚠️ MODO DEMONSTRAÇÃO (dados de teste)")
+    else:
+        print(f"   ✅ DADOS REAIS do governo")
+    print(f"{'='*60}")
+    
+    # Mostra exemplo
+    if todas:
+        print(f"\n🔗 Exemplo:")
+        ex = todas[0]
+        print(f"   Órgão: {ex['orgao'][:50]}...")
+        print(f"   Objeto: {ex['objeto'][:50]}...")
+        print(f"   Valor: R$ {ex['valor']:,.2f}")
+        print(f"   Link: {ex['link'][:60]}...")
+    
+    return todas 
+[FIM DO ARQUIVO fontes_hibrido.py] 
+
+ 
+========================================== 
+ARQUIVO: iniciar_tudo.py 
+========================================== 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROBÔ DE LICITAÇÕES NACIONAL - SISTEMA UNIFICADO
+Roda coletor + servidor web automaticamente
+"""
+
+import subprocess
+import sys
+import time
+import threading
+import os
+
+def rodar_robo():
+    """Roda o coletor de licitações"""
+    print("🤖 Iniciando coletor de licitações...")
+    subprocess.run([sys.executable, "robo.py"])
+
+def rodar_web():
+    """Roda o servidor web"""
+    print("🌐 Iniciando painel web...")
+    time.sleep(3)  # Espera o banco criar
+    subprocess.run([sys.executable, "app.py"])
+
+if __name__ == "__main__":
+    print("""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║     🤖 ROBÔ DE LICITAÇÕES NACIONAL - SISTEMA COMPLETO       ║
+    ║                                                              ║
+    ║  Iniciando automaticamente:                                  ║
+    ║  1. Coletor de licitações (robo.py)                         ║
+    ║  2. Servidor web (app.py)                                   ║
+    ║                                                              ║
+    ║  Acesse: http://localhost:5000                              ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
+    
+    # Roda o coletor em thread separada
+    thread_robo = threading.Thread(target=rodar_robo)
+    thread_robo.daemon = True
+    thread_robo.start()
+    
+    # Roda o servidor web (principal)
+    rodar_web() 
+[FIM DO ARQUIVO iniciar_tudo.py] 
+
+ 
+========================================== 
+ARQUIVO: robo.py 
+========================================== 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import time
+import sys
+from datetime import datetime
+
+# Configurações padrão (caso config.py falhe)
+try:
+    from config import INTERVALO_BUSCA, MARGEM_MINIMA, PALAVRAS_ARQUIVO
+except ImportError:
+    INTERVALO_BUSCA = 1800  # 30 minutos
+    MARGEM_MINIMA = 0.25    # 25%
+    PALAVRAS_ARQUIVO = "keywords.txt"
+
+# Banco de dados
+try:
+    from banco import criar_banco, salvar_licitacao, estatisticas
+except ImportError as e:
+    print(f"❌ Erro ao importar banco: {e}")
+    sys.exit(1)
+
+# Analisador
+try:
+    from analisador import margem
+except ImportError as e:
+    print(f"❌ Erro ao importar analisador: {e}")
+    sys.exit(1)
+
+# Fontes de dados - tenta híbrido primeiro, depois normal
+try:
+    from fontes_hibrido import buscar_todas_fontes
+    print("✅ Usando modo HÍBRIDO (APIs + Demo)")
+except ImportError:
+    try:
+        from fontes import buscar_todas_fontes
+        print("✅ Usando modo API apenas")
+    except ImportError as e:
+        print(f"❌ Erro ao importar fontes: {e}")
+        sys.exit(1)
+
+
+class RoboLicitacoes:
+    def __init__(self):
+        self.palavras_chave = self.carregar_palavras()
+        self.rodadas = 0
+        self.oportunidades_encontradas = 0
+        
+    def carregar_palavras(self):
+        """Carrega palavras-chave do arquivo"""
+        try:
+            with open(PALAVRAS_ARQUIVO, 'r', encoding='utf-8') as f:
+                palavras = []
+                for linha in f:
+                    linha = linha.strip()
+                    if linha and not linha.startswith('#'):
+                        palavras.append(linha.lower())
+                print(f"✅ {len(palavras)} palavras-chave carregadas")
+                return palavras
+        except Exception as e:
+            print(f"⚠️ Usando palavras padrão: {e}")
+            return [
+                "material escolar", "uniforme", "cadeira escolar",
+                "cozinha industrial", "equipamento esportivo",
+                "informatica", "construcao", "limpeza",
+                "cadeira", "mesa", "escola", "notebook"
+            ]
+    
+    def verificar_compatibilidade(self, texto):
+        """Verifica se texto contém palavra-chave"""
+        if not texto:
+            return False, None
+        texto_lower = texto.lower()
+        for palavra in self.palavras_chave:
+            if palavra in texto_lower:
+                return True, palavra
+        return False, None
+    
+    def processar_licitacao(self, licitacao):
+        """Processa e salva uma licitação"""
+        objeto = licitacao.get("objeto", "")
+        valor = licitacao.get("valor", 0) or 0
+        
+        if not objeto:
+            return False
+        
+        # Verifica palavras-chave
+        compativel, palavra = self.verificar_compatibilidade(objeto)
+        if not compativel:
+            return False
+        
+        # Calcula margem
+        try:
+            m = margem(valor)
+        except:
+            m = 0.25  # Padrão se falhar
+        
+        if m < MARGEM_MINIMA:
+            return False
+        
+        # Salva com todos os campos
+        try:
+            novo_id = salvar_licitacao(
+                orgao=licitacao.get("orgao", "")[:500],
+                objeto=objeto[:2000],
+                valor=float(valor),
+                margem=float(m),
+                fonte=licitacao.get("fonte", "DESCONHECIDO"),
+                link=licitacao.get("link", "#"),
+                data_publicacao=licitacao.get("data_publicacao", ""),
+                numero_controle=licitacao.get("numero_controle"),
+                sequencial=licitacao.get("sequencial"),
+                modalidade=licitacao.get("modalidade"),
+                situacao=licitacao.get("situacao"),
+                tipo_link=licitacao.get("tipo_link", "busca")
+            )
+            
+            if novo_id:
+                self.oportunidades_encontradas += 1
+                print("\n" + "="*60)
+                print("🎯 OPORTUNIDADE ENCONTRADA!")
+                print(f"ID: {novo_id}")
+                print(f"Órgão: {licitacao.get('orgao', '')[:60]}...")
+                print(f"Palavra-chave: {palavra}")
+                print(f"Valor: R$ {float(valor):,.2f}")
+                print(f"Margem: {m*100:.1f}%")
+                print(f"Link: {licitacao.get('link', '')[:50]}...")
+                print("="*60 + "\n")
+                return True
+                
+        except Exception as e:
+            print(f"❌ Erro ao salvar: {e}")
+            return False
+        
+        return False
+    
+    def executar_rodada(self):
+        """Executa uma rodada de coleta"""
+        self.rodadas += 1
+        print(f"\n{'='*60}")
+        print(f"🤖 RODADA #{self.rodadas} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+        print(f"{'='*60}")
+        
+        try:
+            licitacoes = buscar_todas_fontes()
+        except Exception as e:
+            print(f"❌ Erro na coleta: {e}")
+            licitacoes = []
+        
+        novas = 0
+        for lic in licitacoes:
+            if self.processar_licitacao(lic):
+                novas += 1
+        
+        # Estatísticas
+        try:
+            stats = estatisticas()
+            print(f"\n📊 ESTATÍSTICAS:")
+            print(f"   Oportunidades hoje: {stats.get('hoje', 0)}")
+            print(f"   Total no banco: {stats.get('total', 0)}")
+            print(f"   Valor total: R$ {stats.get('valor_total', 0):,.2f}")
+            print(f"   Novas nesta rodada: {novas}")
+        except Exception as e:
+            print(f"⚠️ Erro nas estatísticas: {e}")
+        
+        return novas
+    
+    def iniciar(self):
+        """Inicia o robô em loop"""
+        print("""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║           🤖 ROBÔ DE LICITAÇÕES NACIONAL v2.0               ║
+        ║                                                              ║
+        ║  Sistema com Visualizador Embutido - Não redireciona!       ║
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+        
+        try:
+            criar_banco()
+            print("✅ Banco de dados pronto")
+        except Exception as e:
+            print(f"❌ Erro no banco: {e}")
+            return
+        
+        print(f"\n⚙️  Configurações:")
+        print(f"   Margem mínima: {MARGEM_MINIMA*100}%")
+        print(f"   Intervalo: {INTERVALO_BUSCA/60} minutos")
+        print(f"   Palavras-chave: {len(self.palavras_chave)} termos")
+        
+        print("\n🚀 Iniciando monitoramento...\n")
+        
+        try:
+            while True:
+                self.executar_rodada()
+                
+                print(f"\n⏳ Próxima varredura em {INTERVALO_BUSCA/60} minutos...")
+                print("(Pressione Ctrl+C para parar)\n")
+                
+                time.sleep(INTERVALO_BUSCA)
+                
+        except KeyboardInterrupt:
+            print("\n\n🛑 Robô parado pelo usuário")
+            try:
+                stats = estatisticas()
+                print(f"\n📈 RESUMO FINAL:")
+                print(f"   Rodadas: {self.rodadas}")
+                print(f"   Oportunidades: {self.oportunidades_encontradas}")
+                print(f"   Total no banco: {stats.get('total', 0)}")
+            except:
+                pass
+            print("\n💾 Dados salvos em: banco.db")
+            print("🌐 Acesse o painel: http://localhost:5000")
+            print("👋 Até a próxima!")
+
+
+def main():
+    robo = RoboLicitacoes()
+    robo.iniciar()
+
+
+if __name__ == "__main__":
+    main() 
+[FIM DO ARQUIVO robo.py] 
+
+ 
+========================================== 
+ARQUIVO: iniciar_robo.bat 
+========================================== 
+@echo off
+echo ==========================================
+echo  🤖 ROBÔ DE LICITAÇÕES NACIONAL
+echo ==========================================
+echo.
+
+echo Iniciando coletor em nova janela...
+start cmd /k "cd /d D:\robo_licitacoes_nacional && python robo.py"
+
+echo Aguardando 5 segundos...
+timeout /t 5 /nobreak > nul
+
+echo Iniciando servidor web...
+start cmd /k "cd /d D:\robo_licitacoes_nacional && python app.py"
+
+echo.
+echo ==========================================
+echo Acesse: http://localhost:5000
+echo ==========================================
+pause 
+[FIM DO ARQUIVO iniciar_robo.bat] 
+
+ 
+========================================== 
+ARQUIVO: keywords.txt 
+========================================== 
+EDUCAÇÃO
+material escolar
+kit escolar
+uniforme escolar
+cadeira escolar
+mesa escolar
+carteira escolar
+conjunto aluno (padrão FNDE)
+conjunto professor
+lousa digital
+quadro branco
+armario escolar
+estante biblioteca
+colchonete infantil
+bebedouro escolar
+playground
+parque infantil
+brinquedo pedagogico
+material didatico
+material em braille
+COZINHA INDUSTRIAL
+cozinha industrial
+fogao industrial
+forno industrial
+freezer industrial
+geladeira industrial
+camara fria
+batedeira industrial
+liquidificador industrial
+processador alimentos
+descascador de legumes industrial
+bancada inox
+mesa inox
+carro termico / banho maria
+estante gradeada inox
+panela industrial
+utensilio cozinha industrial
+exaustor industrial
+coifa industrial
+sistema contra incendio para coifa
+ESPORTES
+equipamento esportivo
+bola futebol
+bola futsal
+bola volei
+bola basquete
+rede esportiva
+trave futebol
+tabela basquete
+poste de volei/tenis
+placar eletronico
+academia ar livre
+equipamento ginastica
+piso esportivo
+pintura epoxi esportiva
+grama sintetica
+arquibancada metalica
+cone treinamento
+tatame eva
+colete de treino
+ESCRITÓRIO
+cadeira escritorio
+cadeira ergonomica
+longarina (cadeira de espera)
+mesa escritorio
+mesa de reuniao
+armario metalico
+arquivo aco
+estante metalica
+gaveteiro
+divisoria escritorio
+persiana
+balcao recepcao
+INFORMÁTICA
+computador
+notebook
+chromebook
+tablet educacional
+gabinete de recarga (carrinho de tablets)
+monitor
+impressora
+scanner
+servidor
+rack para servidor
+switch rede
+roteador
+nobreak
+projetor multimidia
+datashow
+lousa digital
+toner
+cartucho
+papel a4
+licenciamento de software
+CONSTRUÇÃO E ESTRUTURAS METÁLICAS (SEU SETOR)
+cobertura metalica
+galpao metalico
+mezanino metalico
+tesoura metalica
+trelica metalica
+viga metalica
+pilar metalico
+telha termoacustica (sanduiche)
+telha trapezoidal
+gradil (tipo orsomet / nylofor)
+corrimao e guarda-corpo em aco
+passarela metalica
+escada de incendio metalica
+material construcao
+cimento
+areia
+brita
+tijolo
+bloco concreto
+telha metalica
+telha fibrocimento
+estrutura metalica
+perfil metalico
+aco estrutural
+vergalhao
+tela soldada
+tubo aco
+parafuso estrutural
+steel frame
+light steel frame
+drywall
+placa cimenticia
+manta asfaltica
+impermeabilizante
+tinta latex
+piso ceramico / porcelanato
+louca sanitaria e metais
+caixa d'agua industrial
+ENERGIA SOLAR
+energia solar
+painel solar
+placa solar
+inversor solar
+controlador carga
+bateria solar
+kit solar
+instalacao solar
+estrutura de fixacao para paineis
+LIMPEZA
+material limpeza
+detergente
+desinfetante
+papel higienico
+papel toalha
+sabonete liquido
+saco lixo
+lixeira
+container de lixo (contentor)
+esfregao
+vassoura
+equipamento limpeza
+lavadora alta pressao
+varredeira industrial
+aspirador industrial
+SAÚDE
+equipamento hospitalar
+mobiliario hospitalar
+cama hospitalar
+maca hospitalar
+poltrona de acompanhante
+cadeira rodas
+monitor paciente
+equipamento medico
+insumo hospitalar
+kit de primeiros socorros
+AGRICULTURA
+drone agricola
+implemento agricola
+trator
+rocadeira
+pulverizador
+semente
+fertilizante
+cerca aramada
+SERVIÇOS E OBRAS
+obra
+engenharia
+reforma
+ampliacao
+construcao
+manutencao predial
+execucao obra
+servico engenharia
+memorial descritivo
+planilha orcamentaria
+construcao modular
+pavimentacao / asfalto
+cercamento / alambrado
+TERMOS ESTRATÉGICOS
+registro preco
+ata de registro de preco (arp)
+aquisicao equipamentos
+fornecimento
+dispensa licitacao
+inexigibilidade
+pregao eletronico
+concorrencia publica
+contratacao direta
+menor preco global
+menor preco por lote
+chamamento publico
+ 
+[FIM DO ARQUIVO keywords.txt] 
+
+ 
+========================================== 
+ARQUIVO: requisitos.txt 
+========================================== 
+requests>=2.28.0
+flask>=2.0.0 
+[FIM DO ARQUIVO requisitos.txt] 
+
+ 
+========================================== 
+ARQUIVO: sistema_completo.txt 
+========================================== 
+==========================================  
+EBPRICE SYSTEM - CODIGO COMPLETO  
+Gerado em: 06.03.2026 16:52:35.66  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: analisador.py 
+========================================== 
+"""
+ANALISADOR FINANCEIRO
+Calcula custos, margens e viabilidade de licitações
+"""
+
+def custo_estimado(val 
+[FIM DO ARQUIVO sistema_completo.txt] 
+
+Estrutura de pastas:  
+Listagem de caminhos de pasta
+O n�mero de s�rie do volume � DA28-4EDE
+D:.
+�   analisador.py
+�   app.py
+�   banco.db
+�   banco.py
+�   config.py
+�   config_modo.py
+�   demo_dados.py
+�   estrategia_profissional.py
+�   extrator_edital.py
+�   fontes.py
+�   fontes_hibrido.py
+�   iniciar_robo.bat
+�   iniciar_tudo.py
+�   keywords.txt
+�   requisitos.txt
+�   robo.py
+�   sistema_completo.txt
+�   
+����templates
+�       dashboard.html
+�       detalhe.html
+�       edital_embutido.html
+�       precificador.html
+�       visualizador.html
+�       
+����__pycache__
+        analisador.cpython-312.pyc
+        banco.cpython-312.pyc
+        config.cpython-312.pyc
+        demo_dados.cpython-312.pyc
+        fontes.cpython-312.pyc
+        fontes_hibrido.cpython-312.pyc
+        

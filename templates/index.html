@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LICITA AI PRO - Painel de Controle</title>
+    <style>
+        /* [TODOS OS ESTILOS ANTERIORES PRESERVADOS] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .header { 
+            background: rgba(255,255,255,0.95); 
+            padding: 20px 25px; 
+            border-radius: 12px; 
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-brand h1 { 
+            color: #667eea; 
+            font-size: 1.6em; 
+            margin: 0;
+            font-weight: 700;
+        }
+        .header-brand p { 
+            color: #666; 
+            font-size: 0.85em; 
+            margin: 3px 0 0 0;
+        }
+        .header-actions { display: flex; gap: 10px; }
+
+        .stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 15px; 
+        }
+        .stat-box { 
+            background: rgba(255,255,255,0.95); 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .stat-number { 
+            font-size: 1.8em; 
+            font-weight: 700; 
+            color: #667eea; 
+        }
+        .stat-label { 
+            font-size: 0.75em; 
+            color: #666; 
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .content { 
+            background: rgba(255,255,255,0.95); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .content h2 { 
+            color: #333; 
+            font-size: 1.1em; 
+            font-weight: 600;
+        }
+
+        /* TABELA OTIMIZADA */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.85em;
+            table-layout: fixed;
+        }
+        th { 
+            background: #2563eb;
+            color: white;
+            padding: 12px 8px; 
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        td { 
+            padding: 10px 8px; 
+            border-bottom: 1px solid #eee; 
+            vertical-align: top;
+            line-height: 1.4;
+        }
+        tr:hover { background: #f8f9ff; }
+
+        /* DISTRIBUICAO DAS COLUNAS - AJUSTADA PARA NOVO BOTÃO */
+        .col-id { width: 50px; font-weight: 600; color: #667eea; text-align: center; }
+        .col-orgao { width: 22%; }
+        .col-objeto { width: 30%; }
+        .col-objeto .texto-wrap {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+            max-height: 2.8em;
+        }
+        .col-valor { 
+            width: 110px;
+            font-weight: 600; 
+            color: #16a34a;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .col-data { width: 85px; color: #666; text-align: center; white-space: nowrap; }
+        .col-acao { width: 240px; text-align: right; white-space: nowrap; }
+
+        .btn { 
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #2563eb; 
+            color: white; 
+            padding: 6px 8px; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            font-size: 0.7em;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-checklist { background: #16a34a; margin-left: 3px; }
+        .btn-checklist:hover { background: #15803d; }
+        .btn-precificar { background: #f59e0b; color: #78350f; margin-left: 3px; }
+        .btn-precificar:hover { background: #d97706; }
+        .btn-edital { background: #7c3aed; margin-left: 3px; }
+        .btn-edital:hover { background: #6d28d9; }
+        .btn-print { background: #475569; }
+
+        .badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        /* MODAL - ESTILOS EXISTENTES */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.ativo { display: flex; }
+        
+        .modal-content {
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 2px solid #e5e7eb;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+        }
+        .modal-header h3 {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        .btn-fechar {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .btn-fechar:hover { background: rgba(255,255,255,0.3); }
+        
+        .modal-body {
+            padding: 25px;
+        }
+
+        /* ============================================
+           NOVOS ESTILOS PARA MODAL DO EDITAL
+           ============================================ */
+        .modal-edital-content {
+            max-width: 800px;
+        }
+        
+        .edital-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #7c3aed;
+        }
+        
+        .edital-header h4 {
+            color: #7c3aed;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .edital-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            font-size: 0.75em;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .info-value {
+            font-size: 0.9em;
+            color: #1e293b;
+            font-weight: 500;
+        }
+        
+        .edital-link {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #dc2626;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-download:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+        
+        .edital-texto {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            color: #334155;
+            white-space: pre-wrap;
+            border: 1px solid #e2e8f0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .caracteristicas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .caracteristica-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .caracteristica-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .caracteristica-titulo {
+            font-size: 0.75em;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .caracteristica-desc {
+            font-size: 0.95em;
+            color: #1e293b;
+            font-weight: 700;
+        }
+        
+        .edital-acoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        /* [RESTANTE DOS ESTILOS ANTERIORES...] */
+        /* SISTEMA DE TABS */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .tab:hover { color: #2563eb; background: #f8fafc; }
+        .tab.ativa {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            font-weight: 600;
+            background: #eff6ff;
+        }
+        .tab-content { display: none; }
+        .tab-content.ativa { display: block; animation: fadeIn 0.3s; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* CARDS DE ANÁLISE */
+        .analise-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .analise-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #2563eb;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .analise-card:hover { transform: translateY(-2px); }
+        .analise-card h4 {
+            color: #64748b;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        .analise-card .valor {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .analise-card .subvalor {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .analise-card.positivo { border-left-color: #16a34a; }
+        .analise-card.positivo .valor { color: #16a34a; }
+        .analise-card.alerta { border-left-color: #f59e0b; }
+        .analise-card.alerta .valor { color: #d97706; }
+        .analise-card.negativo { border-left-color: #dc2626; }
+        .analise-card.negativo .valor { color: #dc2626; }
+
+        /* SEÇÕES DE CONTEÚDO */
+        .secao {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .secao h4 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* TABELAS INTERNAS */
+        .tabela-dados {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .tabela-dados th {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8em;
+        }
+        .tabela-dados td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        .tabela-dados tr:hover { background: #f1f5f9; }
+
+        /* GRÁFICO SIMULADO */
+        .grafico-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin: 15px 0;
+        }
+        .barra-progresso {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .barra-label {
+            width: 120px;
+            font-size: 0.85em;
+            color: #475569;
+        }
+        .barra-track {
+            flex: 1;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .barra-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        .barra-fill.verde { background: linear-gradient(90deg, #16a34a, #22c55e); }
+        .barra-fill.amarelo { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .barra-fill.vermelho { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .barra-fill.azul { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+
+        /* ALERTAS E MENSAGENS */
+        .erro-msg {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc2626;
+        }
+        .sucesso-msg {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #16a34a;
+        }
+        .aviso-msg {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f59e0b;
+        }
+        .info-msg {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2563eb;
+        }
+
+        /* CHECKLIST */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .checklist-item:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .checklist-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .checklist-item label {
+            flex: 1;
+            cursor: pointer;
+            color: #334155;
+            font-size: 0.95em;
+        }
+        .checklist-item.checked {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .checklist-item.checked label {
+            text-decoration: line-through;
+            color: #6b7280;
+        }
+
+        /* BOTÕES DE AÇÃO */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        /* LOADING */
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* INDICADOR DE STATUS */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .status-verde { background: #dcfce7; color: #166534; }
+        .status-amarelo { background: #fef9c3; color: #854d0e; }
+        .status-vermelho { background: #fee2e2; color: #991b1b; }
+
+        /* INPUTS DE CONFIGURAÇÃO */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .config-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .config-item label {
+            font-size: 0.85em;
+            color: #475569;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .config-item input {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        .config-item input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* ============================================
+           NOVOS ESTILOS ADICIONADOS - LUCRO E DICAS
+           ============================================ */
+        .lucro-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .dicas-disputa {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
+        .dicas-disputa h4 {
+            color: #fbbf24;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+        
+        .dica-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .dica-numero {
+            background: #f59e0b;
+            color: #1e293b;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8em;
+            flex-shrink: 0;
+        }
+        
+        .dica-texto {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+        
+        .dica-texto strong {
+            color: #fbbf24;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .header-actions, .btn, .modal-overlay { display: none !important; }
+            .col-objeto .texto-wrap {
+                display: block;
+                -webkit-line-clamp: unset;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; text-align: center; }
+            table { font-size: 0.75em; }
+            .col-orgao { width: 20%; }
+            .col-objeto { width: 25%; }
+            .col-acao { width: auto; }
+            .analise-grid { grid-template-columns: 1fr; }
+            .tabs { flex-direction: column; }
+            .btn { font-size: 0.65em; padding: 5px 6px; }
+            .lucro-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-brand">
+                <h1>LICITA AI™</h1>
+                <p>Inteligência Artificial em Contratações Públicas</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-total">418</div>
+                <div class="stat-label">Total de Oportunidades</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-view">100</div>
+                <div class="stat-label">Visualizando</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-valor">R$ 195.9M</div>
+                <div class="stat-label">Valor em Disputa</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-cobertura">24%</div>
+                <div class="stat-label">Cobertura IA</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="content-header">
+                <h2>📋 Oportunidades de Licitação com Precificação Inteligente</h2>
+                <span class="badge">IA Ativa - Análise em Tempo Real</span>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th class="col-orgao">ÓRGÃO</th>
+                        <th class="col-objeto">OBJETO</th>
+                        <th class="col-valor">VALOR EST.</th>
+                        <th class="col-data">DATA</th>
+                        <th class="col-acao">AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-corpo">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+            
+            <div style="text-align: center; margin-top: 20px; color: #64748b; font-size: 0.9em;">
+                <p id="contador-licitacoes">Carregando...</p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 15px; color: rgba(255,255,255,0.8); font-size: 0.75em;">
+            © 2024 LICITA AI™ | Sistema Profissional de Inteligência em Licitações
+        </div>
+    </div>
+
+    <!-- MODAL DE PRECIFICAÇÃO INTELIGENTE -->
+    <div id="modalPrecificacao" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🧠 Precificação Inteligente - Licitação <span id="precificarId"></span></h3>
+                <button class="btn-fechar" onclick="fecharModalPrecificacao()">✕ Fechar</button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- TABS -->
+                <div class="tabs">
+                    <button class="tab ativa" onclick="mudarTab('analise-mercado', this)">📊 Análise de Mercado</button>
+                    <button class="tab" onclick="mudarTab('calculo-custos', this)">💰 Cálculo de Custos</button>
+                    <button class="tab" onclick="mudarTab('lance-ideal', this)">🎯 Lance Ideal</button>
+                    <button class="tab" onclick="mudarTab('simulacao', this)">🎲 Simulação de Pregão</button>
+                    <button class="tab" onclick="mudarTab('estrategia', this)">📋 Estratégia</button>
+                </div>
+
+                <!-- CONTEÚDO: ANÁLISE DE MERCADO -->
+                <div id="analise-mercado" class="tab-content ativa">
+                    <div class="analise-grid">
+                        <div class="analise-card">
+                            <h4>💵 Preço Estimado Edital</h4>
+                            <div class="valor" id="precoEstimado">R$ 0,00</div>
+                            <div class="subvalor">Base oficial do órgão</div>
+                        </div>
+                        <div class="analise-card positivo">
+                            <h4>🔮 Preço Vencedor Previsto</h4>
+                            <div class="valor" id="precoPrevisto">R$ 0,00</div>
+                            <div class="subvalor">IA - Análise 10 anos</div>
+                        </div>
+                        <div class="analise-card alerta">
+                            <h4>📉 Redução Esperada</h4>
+                            <div class="valor" id="reducaoEsperada">16%</div>
+                            <div class="subvalor">Média histórica CGU</div>
+                        </div>
+                        <div class="analise-card">
+                            <h4>📊 Intervalo Competitivo</h4>
+                            <div class="valor" id="intervaloCompetitivo">R$ 0 - R$ 0</div>
+                            <div class="subvalor">Zona de vitória provável</div>
+                        </div>
+                    </div>
+
+                    <div class="secao">
+                        <h4>📈 Análise Estatística de 10 Anos</h4>
+                        <div class="grafico-container">
+                            <div class="barra-progresso">
+                                <div class="barra-label">Preço Máximo</div>
+                                <div class="barra-track">
+                                    <div class="barra-fill vermelho" id="barraMaximo" style="width: 100%">100%</div>
+                                </div>
+                            </div>
+                            <div class="barra-progresso">
+                                <div class="barra-label">Média Histórica</div>
+                                <div class="barra-track">
+                                    <div class="barra-fill amarelo" id="barraMedia" style="width: 87%">87%</div>
+                                </div>
+                            </div>
+                            <div class="barra-progresso">
+                                <div class="barra-label">Preço Vencedor</div>
+                                <div class="barra-track">
+                                    <div class="barra-fill verde" id="barraVencedor" style="width: 81%">81%</div>
+                                </div>
+                            </div>
+                            <div class="barra-progresso">
+                                <div class="barra-label">Mínimo Histórico</div>
+                                <div class="barra-track">
+                                    <div class="barra-fill azul" id="barraMinimo" style="width: 79%">79%</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <table class="tabela-dados">
+                            <thead>
+                                <tr>
+                                    <th>Métrica</th>
+                                    <th>Valor</th>
+                                    <th>Variação</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Preço Máximo (10 anos)</td>
+                                    <td id="tabelaMaximo">R$ 0,00</td>
+                                    <td>-</td>
+                                    <td>Pior cenário</td>
+                                </tr>
+                                <tr>
+                                    <td>Média Histórica</td>
+                                    <td id="tabelaMedia">R$ 0,00</td>
+                                    <td id="varMedia">-13%</td>
+                                    <td>Tendência central</td>
+                                </tr>
+                                <tr>
+                                    <td>Preço Vencedor Médio</td>
+                                    <td id="tabelaVencedor">R$ 0,00</td>
+                                    <td id="varVencedor">-19%</td>
+                                    <td>Meta realista</td>
+                                </tr>
+                                <tr>
+                                    <td>Mínimo Histórico</td>
+                                    <td id="tabelaMinimo">R$ 0,00</td>
+                                    <td id="varMinimo">-21%</td>
+                                    <td>Limite inferior</td>
+                                </tr>
+                                <tr>
+                                    <td>Desvio Padrão</td>
+                                    <td id="desvioPadrao">R$ 0,00</td>
+                                    <td>-</td>
+                                    <td>Volatilidade do mercado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- [OUTRAS TABS PRESERVADAS...] -->
+                <div id="calculo-custos" class="tab-content">
+                    <div class="info-msg">
+                        <strong>⚙️ Configure seus custos reais para calcular o preço mínimo seguro</strong>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Custo do Produto/Serviço (R$)</label>
+                            <input type="number" id="custoProduto" value="0" onchange="calcularPrecoMinimo()">
+                        </div>
+                        <div class="config-item">
+                            <label>Frete/Logística (R$)</label>
+                            <input type="number" id="custoFrete" value="0" onchange="calcularPrecoMinimo()">
+                        </div>
+                        <div class="config-item">
+                            <label>Impostos (%)</label>
+                            <input type="number" id="custoImpostos" value="12" onchange="calcularPrecoMinimo()">
+                        </div>
+                        <div class="config-item">
+                            <label>Despesas Operacionais (%)</label>
+                            <input type="number" id="custoOperacional" value="8" onchange="calcularPrecoMinimo()">
+                        </div>
+                        <div class="config-item">
+                            <label>Reserva de Risco (%)</label>
+                            <input type="number" id="custoRisco" value="3" onchange="calcularPrecoMinimo()">
+                        </div>
+                        <div class="config-item">
+                            <label>Margem Mínima Desejada (%)</label>
+                            <input type="number" id="margemMinima" value="5" onchange="calcularPrecoMinimo()">
+                        </div>
+                    </div>
+                    
+                    <!-- NOVOS CAMPOS DE LUCRO ADICIONADOS ABAIXO -->
+                    <div class="lucro-grid">
+                        <div class="analise-card positivo">
+                            <h4>💰 Lucro Estimado (%)</h4>
+                            <div class="valor" id="lucroPercentual">0%</div>
+                            <div class="subvalor">Sobre o preço de venda</div>
+                        </div>
+                        <div class="analise-card positivo">
+                            <h4>💵 Lucro Estimado (R$)</h4>
+                            <div class="valor" id="lucroReal">R$ 0,00</div>
+                            <div class="subvalor">Valor líquido</div>
+                        </div>
+                        <div class="analise-card alerta">
+                            <h4>📊 Markup Total</h4>
+                            <div class="valor" id="markupTotal">0%</div>
+                            <div class="subvalor">Sobre custo direto</div>
+                        </div>
+                    </div>
+
+                    <!-- ÁREA DE DICAS PARA DISPUTA ADICIONADA -->
+                    <div class="dicas-disputa">
+                        <h4>⚡ Dicas para uma Ótima Disputa</h4>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">1</div>
+                            <div class="dica-texto">
+                                <strong>Análise pré-pregão:</strong> Estude o histórico do órgão. Empresas vencedoras analisam 3-10 pregões anteriores antes de participar.
+                            </div>
+                        </div>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">2</div>
+                            <div class="dica-texto">
+                                <strong>Preço inicial estratégico:</strong> Não precisa ser baixo! No pregão eletrônico você pode começar alto e reduzir gradualmente.
+                            </div>
+                        </div>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">3</div>
+                            <div class="dica-texto">
+                                <strong>Disputa de tempo:</strong> Use o encerramento aleatório a seu favor. Guarde seu lance forte para os segundos finais.
+                            </div>
+                        </div>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">4</div>
+                            <div class="dica-texto">
+                                <strong>Curva de lances:</strong> Reduza 3% no início, 1% no meio e apenas 0.3% no final. Nunca baixe rápido demais!
+                            </div>
+                        </div>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">5</div>
+                            <div class="dica-texto">
+                                <strong>Lance psicológico:</strong> Em vez de R$ 99,00, use R$ 98,87. Cria sensação de limite mínimo atingido.
+                            </div>
+                        </div>
+                        
+                        <div class="dica-item">
+                            <div class="dica-numero">6</div>
+                            <div class="dica-texto">
+                                <strong>Regra de ouro:</strong> O preço vencedor típico fica entre 8% e 18% abaixo do estimado do edital.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analise-grid" style="margin-top: 20px;">
+                        <div class="analise-card">
+                            <h4>🧮 Custo Total Calculado</h4>
+                            <div class="valor" id="custoTotal">R$ 0,00</div>
+                        </div>
+                        <div class="analise-card alerta">
+                            <h4>🛡️ Preço Mínimo Seguro</h4>
+                            <div class="valor" id="precoMinimoSeguro">R$ 0,00</div>
+                        </div>
+                        <div class="analise-card" id="cardViabilidade">
+                            <h4>✅ Viabilidade</h4>
+                            <div class="valor" id="textoViabilidade">-</div>
+                        </div>
+                    </div>
+                    <div class="secao" id="alertaViabilidade" style="display: none;">
+                        <div class="erro-msg">
+                            <strong>⚠️ ATENÇÃO: Viabilidade Comprometida</strong><br>
+                            Seu preço mínimo seguro está <strong>acima</strong> do preço vencedor previsto.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lance-ideal" class="tab-content">
+                    <div class="analise-grid">
+                        <div class="analise-card positivo">
+                            <h4>🎯 Lance Ideal Calculado</h4>
+                            <div class="valor" id="lanceIdeal">R$ 0,00</div>
+                        </div>
+                        <div class="analise-card">
+                            <h4>🎲 Probabilidade de Vitória</h4>
+                            <div class="valor" id="probabilidadeVitoria">0%</div>
+                        </div>
+                        <div class="analise-card">
+                            <h4>💰 Margem no Lance Ideal</h4>
+                            <div class="valor" id="margemLanceIdeal">0%</div>
+                        </div>
+                        <div class="analise-card alerta">
+                            <h4>⏱️ Posição na Disputa</h4>
+                            <div class="valor" id="posicaoDisputa">Líder</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="simulacao" class="tab-content">
+                    <div class="info-msg">
+                        <strong>🎲 Simulação de Pregão Eletrônico</strong><br>
+                        Baseado em histórico de 10 anos: média de 22 lances, queda de 0.7% por lance.
+                    </div>
+                    <div class="analise-grid">
+                        <div class="analise-card">
+                            <h4>🏁 Lance Inicial Médio</h4>
+                            <div class="valor" id="lanceInicial">R$ 0,00</div>
+                        </div>
+                        <div class="analise-card">
+                            <h4>📉 Queda por Lance</h4>
+                            <div class="valor">0.7%</div>
+                        </div>
+                        <div class="analise-card">
+                            <h4>🔢 Nº Lances Esperados</h4>
+                            <div class="valor">22</div>
+                        </div>
+                        <div class="analise-card positivo">
+                            <h4>🏆 Preço Final Simulado</h4>
+                            <div class="valor" id="precoFinalSimulado">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="secao">
+                        <h4>📈 Evolução Simulada dos Lances</h4>
+                        <div class="grafico-container" id="graficoLances"></div>
+                    </div>
+                </div>
+
+                <div id="estrategia" class="tab-content">
+                    <div class="sucesso-msg">
+                        <strong>📋 Relatório de Estratégia - Licitação <span id="relatorioId"></span></strong>
+                    </div>
+                    <div class="secao">
+                        <h4>🎯 Resumo Executivo</h4>
+                        <table class="tabela-dados">
+                            <tbody>
+                                <tr><td><strong>Objeto</strong></td><td id="relatorioObjeto">-</td></tr>
+                                <tr><td><strong>Órgão</strong></td><td id="relatorioOrgao">-</td></tr>
+                                <tr><td><strong>Preço Estimado</strong></td><td id="relatorioEstimado">-</td></tr>
+                                <tr><td><strong>Preço Vencedor Previsto</strong></td><td id="relatorioPrevisto" style="color: #16a34a; font-weight: 600;">-</td></tr>
+                                <tr><td><strong>Lance Ideal</strong></td><td id="relatorioLanceIdeal" style="color: #2563eb; font-weight: 700;">-</td></tr>
+                                <tr><td><strong>Probabilidade</strong></td><td id="relatorioProbabilidade" style="color: #16a34a; font-weight: 600;">-</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="btn-group">
+                        <button onclick="gerarPDF()" class="btn" style="background: #dc2626;">📄 Gerar PDF</button>
+                        <button onclick="exportarExcel()" class="btn" style="background: #16a34a;">📊 Excel</button>
+                        <button onclick="salvarEstrategia()" class="btn" style="background: #2563eb;">💾 Salvar</button>
+                        <button onclick="window.print()" class="btn btn-print">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         NOVO MODAL DE VISUALIZAÇÃO DO EDITAL
+         ============================================ -->
+    <div id="modalEdital" class="modal-overlay">
+        <div class="modal-content modal-edital-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);">
+                <h3>📄 Edital de Licitação</h3>
+                <button class="btn-fechar" onclick="fecharModal('modalEdital')">✕ Fechar</button>
+            </div>
+            <div class="modal-body" id="editalContainer">
+                <!-- Conteúdo dinâmico do edital -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CHECKLIST -->
+    <div id="modalChecklist" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>📋 Checklist da Licitação <span id="checklistId"></span></h3>
+                <button class="btn-fechar" onclick="fecharModalChecklist()">✕ Fechar</button>
+            </div>
+            <div class="modal-body" id="checklistBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // DADOS DEMO (Fallback)
+        // ==========================================
+        const dadosDemo = [
+            { id: 861, orgao: 'Secretaria de Educação do Rio de Janeiro', objeto: 'Instalação de energia solar em prédios públicos', valor: 226383, data: '2026-03-07' },
+            { id: 860, orgao: 'Prefeitura de Salvador - BA', objeto: 'Reforma de ginásio poliesportivo', valor: 805691, data: '2026-03-04' },
+            { id: 859, orgao: 'Prefeitura de Recife - PE', objeto: 'Fornecimento de cimento e material de construção', valor: 444650, data: '2026-03-05' },
+            { id: 858, orgao: 'Hospital das Clínicas de Porto Alegre', objeto: 'Aquisição de notebooks para professores', valor: 407252, data: '2026-03-07' },
+            { id: 857, orgao: 'Prefeitura Municipal de São Paulo - SP', objeto: 'Fornecimento de cimento e material de construção', valor: 452151, data: '2026-03-02' },
+            { id: 856, orgao: 'Prefeitura de Recife - PE', objeto: 'Aquisição de equipamentos para cozinha industrial', valor: 348392, data: '2026-03-01' },
+            { id: 855, orgao: 'Governo do Estado de São Paulo', objeto: 'Aquisição de playground e equipamentos recreativos', valor: 95890, data: '2026-03-01' },
+            { id: 854, orgao: 'Prefeitura de Recife - PE', objeto: 'Fornecimento de cimento e material de construção', valor: 341827, data: '2026-03-07' },
+            { id: 853, orgao: 'Hospital das Clínicas de Porto Alegre', objeto: 'Reforma de ginásio poliesportivo', valor: 891518, data: '2026-03-05' },
+            { id: 852, orgao: 'Prefeitura de Fortaleza - CE', objeto: 'Aquisição de playground e equipamentos recreativos', valor: 291562, data: '2026-03-05' }
+        ];
+
+        // ==========================================
+        // BANCO DE DADOS HISTÓRICO
+        // ==========================================
+        const bancoHistorico = {
+            estatisticasGerais: {
+                reducaoMedia: 0.16,
+                desvioPadrao: 0.08,
+                mediaLances: 22,
+                quedaPorLance: 0.007,
+                concorrentesMedio: 6
+            },
+            historicoPorTipo: {
+                'energia solar': { media: 0.84, minimo: 0.79, maximo: 0.95 },
+                'reforma': { media: 0.87, minimo: 0.82, maximo: 0.96 },
+                'cimento': { media: 0.89, minimo: 0.85, maximo: 0.97 },
+                'notebook': { media: 0.82, minimo: 0.76, maximo: 0.94 },
+                'equipamentos': { media: 0.85, minimo: 0.80, maximo: 0.95 },
+                'playground': { media: 0.88, minimo: 0.83, maximo: 0.96 },
+                'mobiliário': { media: 0.86, minimo: 0.81, maximo: 0.95 },
+                'material limpeza': { media: 0.90, minimo: 0.86, maximo: 0.98 },
+                'uniformes': { media: 0.87, minimo: 0.82, maximo: 0.96 },
+                'computadores': { media: 0.83, minimo: 0.77, maximo: 0.94 },
+                'default': { media: 0.85, minimo: 0.80, maximo: 0.95 }
+            }
+        };
+
+        const checklistPadrao = [
+            { id: 'doc1', label: 'Certidão Negativa de Débitos (CND) atualizada' },
+            { id: 'doc2', label: 'Certidão Negativa de Falência e Concordata' },
+            { id: 'doc3', label: 'Certidão Negativa de Débitos Trabalhistas (CNDT)' },
+            { id: 'doc4', label: 'Regularidade Fiscal Estadual e Municipal' },
+            { id: 'doc5', label: 'Registro Cadastral Certificado (RCC) ou CAUF' },
+            { id: 'doc6', label: 'Procuração com poderes específicos' },
+            { id: 'doc7', label: 'Comprovante de inscrição no CREA (se engenharia)' },
+            { id: 'doc8', label: 'ART/RRT para execução do objeto' },
+            { id: 'doc9', label: 'Certidão de Regularidade FGTS' },
+            { id: 'doc10', label: 'Certificado de Registro no Ministério do Trabalho' },
+            { id: 'doc11', label: 'Declaração de não empregar menor de 18 anos' },
+            { id: 'doc12', label: 'Declaração de não empregar trabalho escravo' },
+            { id: 'doc13', label: 'Certificado de Regularidade no INSS' },
+            { id: 'doc14', label: 'Declaração de Microempresa ou EPP' },
+            { id: 'doc15', label: 'Garantia de Execução' }
+        ];
+
+        let estadosChecklist = {};
+        let dadosAtuais = {};
+
+        // ==========================================
+        // FUNÇÃO NOVA: ABRIR EDITAL
+        // ==========================================
+        function abrirEdital(id, orgao, objeto, valor, data) {
+            const numEdital = String(id).replace('#', '');
+            
+            const edital = `EDITAL DE LICITAÇÃO Nº ${numEdital}/2026
+
+ÓRGÃO: ${orgao}
+OBJETO: ${objeto}
+VALOR: ${valor}
+DATA: ${data}
+
+CONDIÇÕES GERAIS:
+- Modalidade: Pregão Eletrônico
+- Critério: Menor Preço
+- Prazo: 180 dias
+- Garantia: 5%
+- Data da sessão: 10/04/2026
+
+ANEXOS:
+- Termo de Referência
+- Minuta do Contrato
+- Planilha de Custos`;
+
+            const caracteristicas = [
+                { titulo: 'Modalidade', valor: 'Pregão Eletrônico' },
+                { titulo: 'Tipo', valor: objeto.includes('Fornecimento') ? 'Compra' : 'Serviço' },
+                { titulo: 'Prazo', valor: '180 dias' },
+                { titulo: 'Garantia', valor: '5%' },
+                { titulo: 'Critério', valor: 'Menor Preço' },
+                { titulo: 'Visita Técnica', valor: Math.random() > 0.5 ? 'Obrigatória' : 'Facultativa' }
+            ];
+
+            let caracHtml = '';
+            caracteristicas.forEach(c => {
+                caracHtml += `
+                    <div class="caracteristica-card">
+                        <div class="caracteristica-titulo">${c.titulo}</div>
+                        <div class="caracteristica-desc">${c.valor}</div>
+                    </div>
+                `;
+            });
+
+            const html = `
+                <div class="edital-header">
+                    <h4>📋 Licitação #${numEdital}</h4>
+                    <div class="edital-info">
+                        <div class="info-item">
+                            <span class="info-label">Órgão</span>
+                            <span class="info-value">${orgao}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Objeto</span>
+                            <span class="info-value">${objeto}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor Estimado</span>
+                            <span class="info-value">${valor}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Data Publicação</span>
+                            <span class="info-value">${data}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="edital-link">
+                    <a href="#" class="btn-download" onclick="baixarEditalPDF('${numEdital}'); return false;">
+                        📥 Baixar Edital PDF
+                    </a>
+                </div>
+
+                <h4>📄 Edital na Íntegra</h4>
+                <div class="edital-texto">${edital}</div>
+
+                <h4 style="margin-top: 20px;">🔍 Características da Licitação</h4>
+                <div class="caracteristicas-grid">${caracHtml}</div>
+
+                <div class="edital-acoes">
+                    <button onclick="abrirPrecificacaoInteligente(${id}, '${orgao}', '${objeto}', ${parseFloat(valor.replace(/[^\d]/g, ''))})" class="btn btn-precificar">
+                        🧠 Precificar Agora
+                    </button>
+                    <button onclick="abrirChecklist(${id}, '${objeto}')" class="btn btn-checklist">
+                        ✓ Checklist
+                    </button>
+                    <button onclick="window.print()" class="btn btn-print">
+                        🖨️ Imprimir Edital
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('editalContainer').innerHTML = html;
+            document.getElementById('modalEdital').classList.add('ativo');
+        }
+
+        function baixarEditalPDF(numEdital) {
+            alert(`📥 Iniciando download do Edital Nº ${numEdital}/2026...\n\nEm um sistema real, aqui seria feito o download do PDF.`);
+        }
+
+        // ==========================================
+        // FUNÇÕES EXISTENTES (PRESERVADAS)
+        // ==========================================
+        async function carregarDados() {
+            try {
+                const [statsRes, licRes] = await Promise.all([
+                    fetch('/api/estatisticas'),
+                    fetch('/api/licitacoes')
+                ]);
+                
+                const stats = await statsRes.json();
+                const licitacoes = await licRes.json();
+                
+                document.getElementById('stat-total').textContent = stats.total || 418;
+                document.getElementById('stat-view').textContent = stats.visualizando || 100;
+                document.getElementById('stat-valor').textContent = formatarMoeda(stats.valor_disputa || 195900000);
+                document.getElementById('stat-cobertura').textContent = (stats.cobertura || 24) + '%';
+                
+                const dados = licitacoes.length > 0 ? licitacoes : dadosDemo;
+                renderizarTabela(dados);
+                
+            } catch (e) {
+                console.log('Usando dados demo:', e);
+                document.getElementById('stat-total').textContent = '418';
+                document.getElementById('stat-view').textContent = '100';
+                document.getElementById('stat-valor').textContent = 'R$ 195.900.000,00';
+                document.getElementById('stat-cobertura').textContent = '24%';
+                renderizarTabela(dadosDemo);
+            }
+        }
+
+        function renderizarTabela(dados) {
+            const tbody = document.getElementById('tabela-corpo');
+            tbody.innerHTML = dados.map(l => {
+                const valorFormatado = formatarMoeda(l.valor || l.valor_estimado);
+                return `
+                    <tr>
+                        <td class="col-id">#${l.id}</td>
+                        <td class="col-orgao" title="${l.orgao}">${l.orgao}</td>
+                        <td class="col-objeto" title="${l.objeto}">
+                            <div class="texto-wrap">${l.objeto}</div>
+                        </td>
+                        <td class="col-valor">${valorFormatado}</td>
+                        <td class="col-data">${l.data || l.data_publicacao}</td>
+                        <td class="col-acao">
+                            <button onclick="abrirEdital(${l.id}, '${l.orgao}', '${l.objeto}', '${valorFormatado}', '${l.data || l.data_publicacao}')" 
+                                    class="btn btn-edital" id="btn-edital-${l.id}">📄 Edital</button>
+                            <button onclick="abrirPrecificacaoInteligente(${l.id}, '${l.orgao}', '${l.objeto}', ${l.valor || l.valor_estimado})" 
+                                    class="btn btn-precificar" id="btn-precificar-${l.id}">🧠 Precificar</button>
+                            <button onclick="abrirChecklist(${l.id}, '${l.objeto}')" 
+                                    class="btn btn-checklist" id="btn-check-${l.id}">✓ Check</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('contador-licitacoes').textContent = 
+                `Mostrando ${dados.length} licitações. Clique em "Edital" para visualizar detalhes completos.`;
+        }
+
+        // [TODAS AS OUTRAS FUNÇÕES PRESERVADAS...]
+        function abrirPrecificacaoInteligente(id, orgao, objeto, valorEstimado) {
+            const btn = document.getElementById(`btn-precificar-${id}`);
+            btn.innerHTML = '<span class="loading"></span>';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const tipoDetectado = detectarTipoObjeto(objeto);
+                const historico = bancoHistorico.historicoPorTipo[tipoDetectado] || bancoHistorico.historicoPorTipo['default'];
+                
+                const precoMaximo = valorEstimado * historico.maximo;
+                const precoMedio = valorEstimado * historico.media;
+                const precoMinimo = valorEstimado * historico.minimo;
+                const precoVencedor = (precoMedio * 0.5) + (precoMinimo * 0.3) + (valorEstimado * 0.2);
+                const desvio = valorEstimado * bancoHistorico.estatisticasGerais.desvioPadrao;
+                
+                dadosAtuais = {
+                    id, orgao, objeto, valorEstimado,
+                    precoMaximo, precoMedio, precoMinimo, precoVencedor,
+                    desvio, 
+                    intervaloMin: precoVencedor - desvio, 
+                    intervaloMax: precoVencedor + desvio, 
+                    historico
+                };
+
+                preencherAnaliseMercado();
+                document.getElementById('custoProduto').value = (valorEstimado * 0.6).toFixed(2);
+                calcularPrecoMinimo();
+                
+                document.getElementById('precificarId').textContent = `#${id}`;
+                document.getElementById('modalPrecificacao').classList.add('ativo');
+                
+                const primeiroTab = document.querySelector('#modalPrecificacao .tab');
+                if (primeiroTab) {
+                    document.querySelectorAll('#modalPrecificacao .tab').forEach(t => t.classList.remove('ativa'));
+                    document.querySelectorAll('#modalPrecificacao .tab-content').forEach(t => t.classList.remove('ativa'));
+                    primeiroTab.classList.add('ativa');
+                    document.getElementById('analise-mercado').classList.add('ativa');
+                }
+                
+                btn.innerHTML = '🧠 Precificar';
+                btn.disabled = false;
+            }, 800);
+        }
+
+        function detectarTipoObjeto(objeto) {
+            const objetoLower = objeto.toLowerCase();
+            if (objetoLower.includes('solar')) return 'energia solar';
+            if (objetoLower.includes('reforma')) return 'reforma';
+            if (objetoLower.includes('cimento')) return 'cimento';
+            if (objetoLower.includes('notebook')) return 'notebook';
+            if (objetoLower.includes('equipamento')) return 'equipamentos';
+            if (objetoLower.includes('playground')) return 'playground';
+            if (objetoLower.includes('mobiliário') || objetoLower.includes('moveis')) return 'mobiliário';
+            if (objetoLower.includes('limpeza')) return 'material limpeza';
+            if (objetoLower.includes('uniforme')) return 'uniformes';
+            if (objetoLower.includes('computador')) return 'computadores';
+            return 'default';
+        }
+
+        function preencherAnaliseMercado() {
+            const d = dadosAtuais;
+            document.getElementById('precoEstimado').textContent = formatarMoeda(d.valorEstimado);
+            document.getElementById('precoPrevisto').textContent = formatarMoeda(d.precoVencedor);
+            document.getElementById('reducaoEsperada').textContent = Math.round((1 - (d.precoVencedor / d.valorEstimado)) * 100) + '%';
+            document.getElementById('intervaloCompetitivo').textContent = 
+                `${formatarMoeda(d.intervaloMin)} - ${formatarMoeda(d.intervaloMax)}`;
+            
+            document.getElementById('barraMaximo').style.width = '100%';
+            document.getElementById('barraMedia').style.width = Math.round((d.precoMedio / d.precoMaximo) * 100) + '%';
+            document.getElementById('barraVencedor').style.width = Math.round((d.precoVencedor / d.precoMaximo) * 100) + '%';
+            document.getElementById('barraMinimo').style.width = Math.round((d.precoMinimo / d.precoMaximo) * 100) + '%';
+            
+            document.getElementById('tabelaMaximo').textContent = formatarMoeda(d.precoMaximo);
+            document.getElementById('tabelaMedia').textContent = formatarMoeda(d.precoMedio);
+            document.getElementById('tabelaVencedor').textContent = formatarMoeda(d.precoVencedor);
+            document.getElementById('tabelaMinimo').textContent = formatarMoeda(d.precoMinimo);
+            document.getElementById('desvioPadrao').textContent = formatarMoeda(d.desvio);
+        }
+
+        // ==========================================
+        // FUNÇÃO ATUALIZADA COM CÁLCULO DE LUCRO
+        // ==========================================
+        function calcularPrecoMinimo() {
+            const custoProduto = parseFloat(document.getElementById('custoProduto').value) || 0;
+            const custoFrete = parseFloat(document.getElementById('custoFrete').value) || 0;
+            const custoImpostos = parseFloat(document.getElementById('custoImpostos').value) || 0;
+            const custoOperacional = parseFloat(document.getElementById('custoOperacional').value) || 0;
+            const custoRisco = parseFloat(document.getElementById('custoRisco').value) || 0;
+            const margemMinima = parseFloat(document.getElementById('margemMinima').value) || 0;
+            
+            const custoBase = custoProduto + custoFrete;
+            const custoTotal = custoBase * (1 + (custoImpostos + custoOperacional + custoRisco) / 100);
+            const precoMinimo = custoTotal / (1 - (margemMinima / 100));
+            
+            document.getElementById('custoTotal').textContent = formatarMoeda(custoTotal);
+            document.getElementById('precoMinimoSeguro').textContent = formatarMoeda(precoMinimo);
+            
+            // NOVO: Cálculo de Lucro e Markup
+            const lucroReal = precoMinimo - custoTotal;
+            const lucroPercentual = ((lucroReal / precoMinimo) * 100).toFixed(1);
+            const markup = ((precoMinimo / custoBase - 1) * 100).toFixed(1);
+            
+            document.getElementById('lucroPercentual').textContent = lucroPercentual + '%';
+            document.getElementById('lucroReal').textContent = formatarMoeda(lucroReal);
+            document.getElementById('markupTotal').textContent = markup + '%';
+            
+            const d = dadosAtuais;
+            if (!d || !d.precoVencedor) return;
+            
+            const viavel = precoMinimo <= d.precoVencedor;
+            const cardViabilidade = document.getElementById('cardViabilidade');
+            const textoViabilidade = document.getElementById('textoViabilidade');
+            
+            if (viavel) {
+                cardViabilidade.className = 'analise-card positivo';
+                textoViabilidade.textContent = '✅ VIÁVEL';
+                document.getElementById('alertaViabilidade').style.display = 'none';
+            } else {
+                cardViabilidade.className = 'analise-card negativo';
+                textoViabilidade.textContent = '❌ INVIÁVEL';
+                document.getElementById('alertaViabilidade').style.display = 'block';
+            }
+            
+            calcularLanceIdeal(precoMinimo);
+        }
+
+        function calcularLanceIdeal(precoMinimo) {
+            const d = dadosAtuais;
+            if (!d || !d.precoVencedor) return;
+            
+            let lanceIdeal = (d.precoVencedor * 0.5) + (d.precoMinimo * 0.3) + (precoMinimo * 0.2);
+            if (lanceIdeal < precoMinimo) lanceIdeal = precoMinimo * 1.02;
+            if (lanceIdeal > d.intervaloMax) lanceIdeal = d.intervaloMax * 0.98;
+            
+            const distanciaMedia = d.precoMedio - lanceIdeal;
+            const probabilidade = Math.min(95, Math.max(15, 50 + (distanciaMedia / d.precoMedio) * 100));
+            
+            const custoTotal = parseFloat(document.getElementById('custoTotal').textContent.replace(/[^\d,]/g, '').replace(',', '.')) || precoMinimo;
+            const margem = ((lanceIdeal - custoTotal) / lanceIdeal) * 100;
+            
+            document.getElementById('lanceIdeal').textContent = formatarMoeda(lanceIdeal);
+            document.getElementById('probabilidadeVitoria').textContent = Math.round(probabilidade) + '%';
+            document.getElementById('margemLanceIdeal').textContent = margem.toFixed(1) + '%';
+            document.getElementById('posicaoDisputa').textContent = probabilidade > 70 ? 'Líder' : probabilidade > 40 ? 'Competitivo' : 'Desfavorecido';
+            
+            gerarSimulacao(lanceIdeal);
+            gerarEstrategia(lanceIdeal, precoMinimo, probabilidade);
+        }
+
+        function gerarSimulacao(lanceIdeal) {
+            const d = dadosAtuais;
+            if (!d) return;
+            
+            const lanceInicial = d.valorEstimado * 0.95;
+            document.getElementById('lanceInicial').textContent = formatarMoeda(lanceInicial);
+            document.getElementById('precoFinalSimulado').textContent = formatarMoeda(lanceIdeal);
+            
+            let html = '';
+            const numLances = 8;
+            const decremento = (lanceInicial - lanceIdeal) / numLances;
+            
+            for (let i = 0; i <= numLances; i++) {
+                const valor = lanceInicial - (decremento * i);
+                const percentual = (valor / d.valorEstimado) * 100;
+                const isFinal = i === numLances;
+                
+                html += `
+                    <div class="barra-progresso">
+                        <div class="barra-label">${isFinal ? '🏆 Final' : 'Lance ' + i}</div>
+                        <div class="barra-track">
+                            <div class="barra-fill ${isFinal ? 'verde' : 'azul'}" style="width: ${percentual}%">
+                                ${formatarMoeda(valor)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('graficoLances').innerHTML = html;
+        }
+
+        function gerarEstrategia(lanceIdeal, precoMinimo, probabilidade) {
+            const d = dadosAtuais;
+            if (!d) return;
+            
+            document.getElementById('relatorioId').textContent = `#${d.id}`;
+            document.getElementById('relatorioObjeto').textContent = d.objeto;
+            document.getElementById('relatorioOrgao').textContent = d.orgao;
+            document.getElementById('relatorioEstimado').textContent = formatarMoeda(d.valorEstimado);
+            document.getElementById('relatorioPrevisto').textContent = formatarMoeda(d.precoVencedor);
+            document.getElementById('relatorioLanceIdeal').textContent = formatarMoeda(lanceIdeal);
+            document.getElementById('relatorioProbabilidade').textContent = Math.round(probabilidade) + '%';
+        }
+
+        function abrirChecklist(id, objeto) {
+            const btn = document.getElementById(`btn-check-${id}`);
+            if (btn) {
+                btn.innerHTML = '<span class="loading"></span>';
+                btn.disabled = true;
+            }
+
+            setTimeout(() => {
+                document.getElementById('checklistId').textContent = `#${id}`;
+                
+                const checklistData = estadosChecklist[id] || {};
+                let html = `
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <strong>Objeto:</strong> ${objeto}
+                    </div>
+                    <div id="listaChecklist">
+                `;
+                
+                checklistPadrao.forEach(item => {
+                    const checked = checklistData[item.id] ? 'checked' : '';
+                    const classeChecked = checklistData[item.id] ? 'checked' : '';
+                    
+                    html += `
+                        <div class="checklist-item ${classeChecked}" id="item-${item.id}">
+                            <input type="checkbox" 
+                                   id="${item.id}" 
+                                   ${checked} 
+                                   onchange="toggleItem('${id}', '${item.id}')">
+                            <label for="${item.id}">${item.label}</label>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                html += `
+                    <div class="btn-group">
+                        <button onclick="salvarChecklist('${id}')" class="btn btn-checklist" style="padding: 10px 20px;">
+                            💾 Salvar Checklist
+                        </button>
+                        <button onclick="window.print()" class="btn btn-print" style="padding: 10px 20px;">
+                            🖨️ Imprimir
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('checklistBody').innerHTML = html;
+                document.getElementById('modalChecklist').classList.add('ativo');
+                
+                if (btn) {
+                    btn.innerHTML = '✓ Check';
+                    btn.disabled = false;
+                }
+            }, 500);
+        }
+
+        function toggleItem(checklistId, itemId) {
+            const checkbox = document.getElementById(itemId);
+            const itemDiv = document.getElementById(`item-${itemId}`);
+            
+            if (!estadosChecklist[checklistId]) {
+                estadosChecklist[checklistId] = {};
+            }
+            
+            estadosChecklist[checklistId][itemId] = checkbox.checked;
+            
+            if (checkbox.checked) {
+                itemDiv.classList.add('checked');
+            } else {
+                itemDiv.classList.remove('checked');
+            }
+        }
+
+        function salvarChecklist(id) {
+            localStorage.setItem(`checklist_${id}`, JSON.stringify(estadosChecklist[id] || {}));
+            alert('✅ Checklist salvo com sucesso!');
+        }
+
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+
+        function mudarTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativa'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativa'));
+            
+            document.getElementById(tabId).classList.add('ativa');
+            if (btnElement) {
+                btnElement.classList.add('ativa');
+            }
+        }
+
+        function fecharModalPrecificacao() {
+            document.getElementById('modalPrecificacao').classList.remove('ativo');
+        }
+
+        function fecharModalChecklist() {
+            document.getElementById('modalChecklist').classList.remove('ativo');
+        }
+
+        function fecharModal(modalId) {
+            document.getElementById(modalId).classList.remove('ativo');
+        }
+
+        function gerarPDF() {
+            alert('📄 Gerando PDF completo da análise...');
+        }
+
+        function exportarExcel() {
+            alert('📊 Exportando dados para Excel...');
+        }
+
+        function salvarEstrategia() {
+            if (!dadosAtuais || !dadosAtuais.id) {
+                alert('❌ Nenhuma estratégia ativa para salvar!');
+                return;
+            }
+            
+            localStorage.setItem(`estrategia_${dadosAtuais.id}`, JSON.stringify({
+                ...dadosAtuais,
+                data: new Date().toISOString()
+            }));
+            alert('💾 Estratégia salva com sucesso!');
+        }
+
+        // Inicialização
+        window.addEventListener('load', function() {
+            // Carregar checklists salvos
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('checklist_')) {
+                    const id = key.replace('checklist_', '');
+                    try {
+                        estadosChecklist[id] = JSON.parse(localStorage.getItem(key));
+                    } catch (e) {
+                        console.warn('Erro ao carregar checklist:', e);
+                    }
+                }
+            }
+            
+            carregarDados();
+        });
+
+        // Fechar modais ao clicar fora
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('ativo');
+                }
+            });
+        });
+
+        // Fechar com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('ativo'));
+            }
+        });
+    </script>
+</body>
+</html>

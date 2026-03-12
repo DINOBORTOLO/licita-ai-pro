@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LICITA AI PRO - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { 
+            background: rgba(255,255,255,0.95); 
+            padding: 20px 25px; 
+            border-radius: 12px; 
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .header h1 { color: #667eea; font-size: 1.8em; }
+        .header p { color: #666; font-size: 0.9em; }
+        
+        .stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 15px; 
+        }
+        .stat-box { 
+            background: rgba(255,255,255,0.95); 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center;
+        }
+        .stat-number { font-size: 1.8em; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 0.75em; color: #666; text-transform: uppercase; margin-top: 5px; }
+
+        .content { 
+            background: rgba(255,255,255,0.95); 
+            padding: 20px; 
+            border-radius: 12px; 
+        }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { background: #2563eb; color: white; padding: 12px 8px; text-align: left; font-size: 0.75em; text-transform: uppercase; }
+        td { padding: 10px 8px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9ff; }
+        
+        .col-id { width: 60px; font-weight: 600; color: #667eea; text-align: center; }
+        .col-orgao { width: 25%; }
+        .col-objeto { width: 35%; }
+        .col-valor { width: 120px; font-weight: 600; color: #16a34a; text-align: right; }
+        .col-data { width: 90px; color: #666; text-align: center; }
+        .col-acao { width: 200px; text-align: right; }
+
+        .btn { 
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #2563eb; color: white; padding: 6px 10px; 
+            border-radius: 4px; font-size: 0.75em; border: none; cursor: pointer;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn-checklist { background: #16a34a; margin-left: 4px; }
+        .btn-precificar { background: #f59e0b; color: #78350f; margin-left: 4px; }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white; border-radius: 16px; max-width: 900px; width: 95%; max-height: 90vh;
+            overflow-y: auto; animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;
+            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            border-radius: 16px 16px 0 0;
+        }
+        .modal-body { padding: 25px; }
+        
+        .tabs { display: flex; gap: 5px; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab { padding: 12px 20px; background: none; border: none; cursor: pointer; color: #64748b; }
+        .tab.active { color: #2563eb; border-bottom: 3px solid #2563eb; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card {
+            background: #f8fafc; padding: 20px; border-radius: 12px;
+            border-left: 4px solid #2563eb;
+        }
+        .card.green { border-left-color: #16a34a; }
+        .card.orange { border-left-color: #f59e0b; }
+        .card h4 { color: #64748b; font-size: 0.75em; text-transform: uppercase; margin-bottom: 10px; }
+        .card .value { font-size: 1.6em; font-weight: 700; color: #1e293b; }
+        .card.green .value { color: #16a34a; }
+
+        .section { background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .section h4 { margin-bottom: 15px; color: #1e293b; }
+
+        .progress-bar { display: flex; align-items: center; margin-bottom: 10px; }
+        .progress-label { width: 120px; font-size: 0.85em; color: #475569; }
+        .progress-track { flex: 1; height: 24px; background: #e2e8f0; border-radius: 12px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-size: 0.75em; font-weight: 600; }
+        .fill-red { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .fill-yellow { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .fill-green { background: linear-gradient(90deg, #16a34a, #22c55e); }
+        .fill-blue { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .config-item { display: flex; flex-direction: column; }
+        .config-item label { font-size: 0.85em; color: #475569; margin-bottom: 5px; }
+        .config-item input { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-color: #dc2626; }
+        .alert-success { background: #d1fae5; color: #065f46; border-color: #16a34a; }
+        .alert-info { background: #dbeafe; color: #1e40af; border-color: #2563eb; }
+
+        .checklist-item { display: flex; align-items: center; padding: 12px; margin-bottom: 8px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .checklist-item.checked { background: #f0fdf4; border-color: #86efac; }
+        .checklist-item input { margin-right: 12px; width: 18px; height: 18px; }
+        .checklist-item.checked label { text-decoration: line-through; color: #6b7280; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e5e7eb; }
+        
+        .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 5px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .badge { background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>LICITA AI PRO</h1>
+                <p>Inteligência Artificial em Contratações Públicas</p>
+            </div>
+            <button class="btn" onclick="window.print()" style="background: #475569;">🖨️ Imprimir</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats" id="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-total">418</div>
+                <div class="stat-label">Total de Oportunidades</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-view">100</div>
+                <div class="stat-label">Visualizando</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-valor">R$ 195.9M</div>
+                <div class="stat-label">Valor em Disputa</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-cobertura">24%</div>
+                <div class="stat-label">Cobertura IA</div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="font-size: 1.1em;">📋 Oportunidades de Licitação</h2>
+                <span class="badge">IA Ativa - Análise em Tempo Real</span>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th class="col-orgao">ÓRGÃO</th>
+                        <th class="col-objeto">OBJETO</th>
+                        <th class="col-valor">VALOR EST.</th>
+                        <th class="col-data">DATA</th>
+                        <th class="col-acao">AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-licitacoes">
+                    <!-- Dados carregados via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Precificação -->
+    <div id="modal-precificacao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🧠 Precificação Inteligente #<span id="preco-id"></span></h3>
+                <button onclick="fecharModal()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">✕ Fechar</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab active" onclick="mudarTab('tab-analise', this)">📊 Análise</button>
+                    <button class="tab" onclick="mudarTab('tab-custos', this)">💰 Custos</button>
+                    <button class="tab" onclick="mudarTab('tab-lance', this)">🎯 Lance</button>
+                    <button class="tab" onclick="mudarTab('tab-estrategia', this)">📋 Estratégia</button>
+                </div>
+
+                <!-- Análise -->
+                <div id="tab-analise" class="tab-content active">
+                    <div class="grid-4">
+                        <div class="card">
+                            <h4>Preço Estimado</h4>
+                            <div class="value" id="analise-estimado">R$ 0,00</div>
+                        </div>
+                        <div class="card green">
+                            <h4>Preço Vencedor (IA)</h4>
+                            <div class="value" id="analise-vencedor">R$ 0,00</div>
+                        </div>
+                        <div class="card orange">
+                            <h4>Redução Esperada</h4>
+                            <div class="value" id="analise-reducao">16%</div>
+                        </div>
+                        <div class="card">
+                            <h4>Intervalo Competitivo</h4>
+                            <div class="value" id="analise-intervalo">R$ 0 - R$ 0</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h4>Análise Estatística (10 anos)</h4>
+                        <div class="progress-bar">
+                            <div class="progress-label">Máximo Histórico</div>
+                            <div class="progress-track"><div class="progress-fill fill-red" id="barra-max" style="width: 100%">100%</div></div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-label">Média Histórica</div>
+                            <div class="progress-track"><div class="progress-fill fill-yellow" id="barra-media" style="width: 87%">87%</div></div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-label">Preço Vencedor</div>
+                            <div class="progress-track"><div class="progress-fill fill-green" id="barra-vencedor" style="width: 81%">81%</div></div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-label">Mínimo Histórico</div>
+                            <div class="progress-track"><div class="progress-fill fill-blue" id="barra-min" style="width: 79%">79%</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custos -->
+                <div id="tab-custos" class="tab-content">
+                    <div class="alert alert-info">Configure seus custos reais para calcular o preço mínimo seguro</div>
+                    
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Custo Produto/Serviço (R$)</label>
+                            <input type="number" id="custo-produto" value="0" onchange="calcularCusto()">
+                        </div>
+                        <div class="config-item">
+                            <label>Frete/Logística (R$)</label>
+                            <input type="number" id="custo-frete" value="0" onchange="calcularCusto()">
+                        </div>
+                        <div class="config-item">
+                            <label>Impostos (%)</label>
+                            <input type="number" id="custo-imposto" value="12" onchange="calcularCusto()">
+                        </div>
+                        <div class="config-item">
+                            <label>Despesas Operacionais (%)</label>
+                            <input type="number" id="custo-op" value="8" onchange="calcularCusto()">
+                        </div>
+                        <div class="config-item">
+                            <label>Reserva de Risco (%)</label>
+                            <input type="number" id="custo-risco" value="3" onchange="calcularCusto()">
+                        </div>
+                        <div class="config-item">
+                            <label>Margem Mínima (%)</label>
+                            <input type="number" id="custo-margem" value="5" onchange="calcularCusto()">
+                        </div>
+                    </div>
+
+                    <div class="grid-4">
+                        <div class="card">
+                            <h4>Custo Total</h4>
+                            <div class="value" id="result-custo-total">R$ 0,00</div>
+                        </div>
+                        <div class="card orange">
+                            <h4>Preço Mínimo Seguro</h4>
+                            <div class="value" id="result-preco-min">R$ 0,00</div>
+                        </div>
+                        <div class="card" id="card-viabilidade">
+                            <h4>Viabilidade</h4>
+                            <div class="value" id="result-viabilidade">-</div>
+                        </div>
+                    </div>
+
+                    <div id="alerta-viabilidade" class="alert alert-error" style="display: none;">
+                        <strong>⚠️ ATENÇÃO:</strong> Preço mínimo acima do previsto. Recomenda-se NÃO PARTICIPAR.
+                    </div>
+                </div>
+
+                <!-- Lance -->
+                <div id="tab-lance" class="tab-content">
+                    <div class="grid-4">
+                        <div class="card green">
+                            <h4>Lance Ideal Calculado</h4>
+                            <div class="value" id="lance-ideal">R$ 0,00</div>
+                        </div>
+                        <div class="card">
+                            <h4>Probabilidade de Vitória</h4>
+                            <div class="value" id="lance-prob">0%</div>
+                        </div>
+                        <div class="card">
+                            <h4>Margem no Lance</h4>
+                            <div class="value" id="lance-margem">0%</div>
+                        </div>
+                        <div class="card orange">
+                            <h4>Posição Estimada</h4>
+                            <div class="value" id="lance-posicao">Líder</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estratégia -->
+                <div id="tab-estrategia" class="tab-content">
+                    <div class="alert alert-success">
+                        <strong>📋 Resumo Executivo</strong><br>
+                        <span id="estrategia-resumo"></span>
+                    </div>
+                    
+                    <div class="section">
+                        <h4>Sequência de Lances Recomendada</h4>
+                        <table class="tabela-dados" style="width: 100%; margin-top: 10px;">
+                            <thead>
+                                <tr style="background: #e2e8f0;">
+                                    <th>Ordem</th>
+                                    <th>Tipo</th>
+                                    <th>Valor</th>
+                                    <th>Redução</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-estrategia"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="recomendacao-final" class="alert alert-info"></div>
+
+                    <div class="btn-group">
+                        <button onclick="salvarEstrategia()" class="btn" style="background: #16a34a;">💾 Salvar Estratégia</button>
+                        <button onclick="window.print()" class="btn" style="background: #475569;">🖨️ Imprimir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Checklist -->
+    <div id="modal-checklist" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>📋 Checklist #<span id="check-id"></span></h3>
+                <button onclick="fecharChecklist()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">✕ Fechar</button>
+            </div>
+            <div class="modal-body" id="checklist-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Dados globais
+        let dadosAtuais = {};
+        let checklistState = {};
+
+        // Checklist padrão
+        const checklistPadrao = [
+            'Certidão Negativa de Débitos (CND)',
+            'Certidão Negativa de Falência',
+            'Regularidade Fiscal',
+            'Registro Cadastral Certificado',
+            'Procuração com poderes',
+            'Certidão de Regularidade FGTS',
+            'Certificado de Regularidade INSS',
+            'Garantia de Execução'
+        ];
+
+        // Carregar dados ao iniciar
+        async function carregarDados() {
+            try {
+                const [statsRes, licRes] = await Promise.all([
+                    fetch('/api/stats'),
+                    fetch('/api/licitacoes')
+                ]);
+                
+                const stats = await statsRes.json();
+                const licitacoes = await licRes.json();
+                
+                // Atualizar stats
+                document.getElementById('stat-total').textContent = stats.total || 418;
+                document.getElementById('stat-view').textContent = stats.visualizando || 100;
+                document.getElementById('stat-valor').textContent = formatarMoeda(stats.valor_disputa || 195900000);
+                document.getElementById('stat-cobertura').textContent = (stats.cobertura || 24) + '%';
+                
+                // Preencher tabela
+                const tbody = document.getElementById('tabela-licitacoes');
+                tbody.innerHTML = licitacoes.map(l => `
+                    <tr>
+                        <td class="col-id">#${l.id}</td>
+                        <td class="col-orgao" title="${l.orgao}">${l.orgao}</td>
+                        <td class="col-objeto">${l.objeto}</td>
+                        <td class="col-valor">${formatarMoeda(l.valor)}</td>
+                        <td class="col-data">${l.data}</td>
+                        <td class="col-acao">
+                            <button class="btn btn-precificar" onclick="abrirPrecificacao(${l.id}, '${l.orgao}', '${l.objeto}', ${l.valor})">🧠 Precificar</button>
+                            <button class="btn btn-checklist" onclick="abrirChecklist(${l.id}, '${l.objeto}')">✓ Check</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+            } catch (e) {
+                console.error('Erro ao carregar:', e);
+            }
+        }
+
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        }
+
+        // Precificação
+        async function abrirPrecificacao(id, orgao, objeto, valor) {
+            const btn = event.target;
+            btn.innerHTML = '<span class="loading"></span> Analisando...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/precificar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, valor, objeto })
+                });
+                
+                const data = await res.json();
+                dadosAtuais = { id, orgao, objeto, ...data };
+                
+                // Preencher modal
+                document.getElementById('preco-id').textContent = id;
+                document.getElementById('analise-estimado').textContent = formatarMoeda(data.estimado);
+                document.getElementById('analise-vencedor').textContent = formatarMoeda(data.vencedor);
+                document.getElementById('analise-reducao').textContent = data.reducao + '%';
+                document.getElementById('analise-intervalo').textContent = 
+                    `${formatarMoeda(data.intervalo_min)} - ${formatarMoeda(data.intervalo_max)}`;
+                
+                // Barras
+                const pct = (v) => Math.round((v / data.maximo) * 100);
+                document.getElementById('barra-max').style.width = '100%';
+                document.getElementById('barra-media').style.width = pct(data.medio) + '%';
+                document.getElementById('barra-media').textContent = pct(data.medio) + '%';
+                document.getElementById('barra-vencedor').style.width = pct(data.vencedor) + '%';
+                document.getElementById('barra-vencedor').textContent = pct(data.vencedor) + '%';
+                document.getElementById('barra-min').style.width = pct(data.minimo) + '%';
+                document.getElementById('barra-min').textContent = pct(data.minimo) + '%';
+                
+                // Custos iniciais
+                document.getElementById('custo-produto').value = (valor * 0.6).toFixed(2);
+                calcularCusto();
+                
+                document.getElementById('modal-precificacao').classList.add('active');
+                
+            } catch (e) {
+                alert('Erro na análise');
+            } finally {
+                btn.innerHTML = '🧠 Precificar';
+                btn.disabled = false;
+            }
+        }
+
+        function calcularCusto() {
+            const produto = parseFloat(document.getElementById('custo-produto').value) || 0;
+            const frete = parseFloat(document.getElementById('custo-frete').value) || 0;
+            const imposto = parseFloat(document.getElementById('custo-imposto').value) || 0;
+            const op = parseFloat(document.getElementById('custo-op').value) || 0;
+            const risco = parseFloat(document.getElementById('custo-risco').value) || 0;
+            const margem = parseFloat(document.getElementById('custo-margem').value) || 0;
+            
+            const base = produto + frete;
+            const total = base * (1 + (imposto + op + risco) / 100);
+            const precoMin = total / (1 - margem / 100);
+            
+            document.getElementById('result-custo-total').textContent = formatarMoeda(total);
+            document.getElementById('result-preco-min').textContent = formatarMoeda(precoMin);
+            
+            // Viabilidade
+            const d = dadosAtuais;
+            if (!d.vencedor) return;
+            
+            const viavel = precoMin <= d.vencedor;
+            const card = document.getElementById('card-viabilidade');
+            const txt = document.getElementById('result-viabilidade');
+            
+            if (viavel) {
+                card.className = 'card green';
+                txt.textContent = '✅ VIÁVEL';
+                document.getElementById('alerta-viabilidade').style.display = 'none';
+            } else {
+                card.className = 'card';
+                txt.textContent = '❌ INVIÁVEL';
+                document.getElementById('alerta-viabilidade').style.display = 'block';
+            }
+            
+            calcularLance(precoMin, total);
+        }
+
+        function calcularLance(precoMin, custoTotal) {
+            const d = dadosAtuais;
+            if (!d.vencedor) return;
+            
+            let ideal = (d.vencedor * 0.5) + (d.minimo * 0.3) + (precoMin * 0.2);
+            if (ideal < precoMin) ideal = precoMin * 1.02;
+            
+            const prob = Math.min(95, Math.max(15, 50 + ((d.medio - ideal) / d.medio) * 100));
+            const margem = ((ideal - custoTotal) / ideal) * 100;
+            
+            document.getElementById('lance-ideal').textContent = formatarMoeda(ideal);
+            document.getElementById('lance-prob').textContent = Math.round(prob) + '%';
+            document.getElementById('lance-margem').textContent = margem.toFixed(1) + '%';
+            document.getElementById('lance-posicao').textContent = prob > 70 ? 'Líder' : prob > 40 ? 'Competitivo' : 'Desfavorecido';
+            
+            gerarEstrategia(ideal, precoMin, prob);
+        }
+
+        function gerarEstrategia(lanceIdeal, precoMin, prob) {
+            const d = dadosAtuais;
+            
+            document.getElementById('estrategia-resumo').innerHTML = `
+                <strong>${d.orgao}</strong><br>
+                Estimado: ${formatarMoeda(d.estimado)} | 
+                Previsto: ${formatarMoeda(d.vencedor)} | 
+                Lance Ideal: ${formatarMoeda(lanceIdeal)}
+            `;
+            
+            const inicial = d.estimado * 0.95;
+            const estrategia = [
+                { o: 1, t: 'Entrada', v: inicial, r: '5%' },
+                { o: 2, t: 'Redução 1', v: inicial * 0.99, r: '1%' },
+                { o: 3, t: 'Redução 2', v: inicial * 0.985, r: '0.5%' },
+                { o: 4, t: 'Redução 3', v: inicial * 0.982, r: '0.3%' },
+                { o: 5, t: 'Final', v: lanceIdeal, r: '0.1%' }
+            ];
+            
+            document.getElementById('tabela-estrategia').innerHTML = estrategia.map(e => `
+                <tr style="${e.t === 'Final' ? 'background: #f0fdf4; font-weight: bold;' : ''}">
+                    <td>${e.o}</td>
+                    <td>${e.t}</td>
+                    <td>${formatarMoeda(e.v)}</td>
+                    <td>${e.r}</td>
+                </tr>
+            `).join('');
+            
+            const viavel = precoMin <= d.vencedor;
+            let rec = '';
+            if (viavel && prob > 60) {
+                rec = '<strong>✅ PARTICIPAR</strong><br>Excelente viabilidade. Execute a estratégia conforme planejado.';
+            } else if (viavel && prob > 40) {
+                rec = '<strong>⚠️ PARTICIPAR COM CAUTELA</strong><br>Viabilidade moderada. Monitore concorrentes.';
+            } else {
+                rec = '<strong>❌ NÃO PARTICIPAR</strong><br>Risco elevado de prejuízo. Considere renegociar custos.';
+            }
+            document.getElementById('recomendacao-final').innerHTML = rec;
+        }
+
+        function salvarEstrategia() {
+            localStorage.setItem(`estrategia_${dadosAtuais.id}`, JSON.stringify(dadosAtuais));
+            alert('Estratégia salva!');
+        }
+
+        // Checklist
+        function abrirChecklist(id, objeto) {
+            document.getElementById('check-id').textContent = id;
+            const saved = JSON.parse(localStorage.getItem(`checklist_${id}`) || '[]');
+            
+            document.getElementById('checklist-body').innerHTML = `
+                <div class="alert alert-info" style="margin-bottom: 15px;"><strong>Objeto:</strong> ${objeto}</div>
+                ${checklistPadrao.map((item, i) => {
+                    const checked = saved.includes(i) ? 'checked' : '';
+                    return `
+                        <div class="checklist-item ${checked}" onclick="toggleCheck(this, ${id}, ${i})">
+                            <input type="checkbox" ${checked} onchange="event.stopPropagation()">
+                            <label>${item}</label>
+                        </div>
+                    `;
+                }).join('')}
+                <div class="btn-group">
+                    <button onclick="salvarChecklist(${id})" class="btn" style="background: #16a34a;">💾 Salvar</button>
+                </div>
+            `;
+            
+            document.getElementById('modal-checklist').classList.add('active');
+        }
+
+        function toggleCheck(el, id, idx) {
+            const cb = el.querySelector('input');
+            cb.checked = !cb.checked;
+            el.classList.toggle('checked', cb.checked);
+        }
+
+        function salvarChecklist(id) {
+            const checks = [];
+            document.querySelectorAll('#checklist-body .checklist-item').forEach((el, i) => {
+                if (el.classList.contains('checked')) checks.push(i);
+            });
+            localStorage.setItem(`checklist_${id}`, JSON.stringify(checks));
+            alert('Checklist salvo!');
+        }
+
+        function fecharChecklist() {
+            document.getElementById('modal-checklist').classList.remove('active');
+        }
+
+        // Utilitários
+        function mudarTab(id, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-precificacao').classList.remove('active');
+        }
+
+        // Fechar modais ao clicar fora
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) m.classList.remove('active');
+            });
+        });
+
+        // Iniciar
+        carregarDados();
+    </script>
+</body>
+</html>

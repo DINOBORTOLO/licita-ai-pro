@@ -1,0 +1,206 @@
+EDUCAÇÃO
+material escolar
+kit escolar
+uniforme escolar
+cadeira escolar
+mesa escolar
+carteira escolar
+conjunto aluno (padrão FNDE)
+conjunto professor
+lousa digital
+quadro branco
+armario escolar
+estante biblioteca
+colchonete infantil
+bebedouro escolar
+playground
+parque infantil
+brinquedo pedagogico
+material didatico
+material em braille
+COZINHA INDUSTRIAL
+cozinha industrial
+fogao industrial
+forno industrial
+freezer industrial
+geladeira industrial
+camara fria
+batedeira industrial
+liquidificador industrial
+processador alimentos
+descascador de legumes industrial
+bancada inox
+mesa inox
+carro termico / banho maria
+estante gradeada inox
+panela industrial
+utensilio cozinha industrial
+exaustor industrial
+coifa industrial
+sistema contra incendio para coifa
+ESPORTES
+equipamento esportivo
+bola futebol
+bola futsal
+bola volei
+bola basquete
+rede esportiva
+trave futebol
+tabela basquete
+poste de volei/tenis
+placar eletronico
+academia ar livre
+equipamento ginastica
+piso esportivo
+pintura epoxi esportiva
+grama sintetica
+arquibancada metalica
+cone treinamento
+tatame eva
+colete de treino
+ESCRITÓRIO
+cadeira escritorio
+cadeira ergonomica
+longarina (cadeira de espera)
+mesa escritorio
+mesa de reuniao
+armario metalico
+arquivo aco
+estante metalica
+gaveteiro
+divisoria escritorio
+persiana
+balcao recepcao
+INFORMÁTICA
+computador
+notebook
+chromebook
+tablet educacional
+gabinete de recarga (carrinho de tablets)
+monitor
+impressora
+scanner
+servidor
+rack para servidor
+switch rede
+roteador
+nobreak
+projetor multimidia
+datashow
+lousa digital
+toner
+cartucho
+papel a4
+licenciamento de software
+CONSTRUÇÃO E ESTRUTURAS METÁLICAS (SEU SETOR)
+cobertura metalica
+galpao metalico
+mezanino metalico
+tesoura metalica
+trelica metalica
+viga metalica
+pilar metalico
+telha termoacustica (sanduiche)
+telha trapezoidal
+gradil (tipo orsomet / nylofor)
+corrimao e guarda-corpo em aco
+passarela metalica
+escada de incendio metalica
+material construcao
+cimento
+areia
+brita
+tijolo
+bloco concreto
+telha metalica
+telha fibrocimento
+estrutura metalica
+perfil metalico
+aco estrutural
+vergalhao
+tela soldada
+tubo aco
+parafuso estrutural
+steel frame
+light steel frame
+drywall
+placa cimenticia
+manta asfaltica
+impermeabilizante
+tinta latex
+piso ceramico / porcelanato
+louca sanitaria e metais
+caixa d'agua industrial
+ENERGIA SOLAR
+energia solar
+painel solar
+placa solar
+inversor solar
+controlador carga
+bateria solar
+kit solar
+instalacao solar
+estrutura de fixacao para paineis
+LIMPEZA
+material limpeza
+detergente
+desinfetante
+papel higienico
+papel toalha
+sabonete liquido
+saco lixo
+lixeira
+container de lixo (contentor)
+esfregao
+vassoura
+equipamento limpeza
+lavadora alta pressao
+varredeira industrial
+aspirador industrial
+SAÚDE
+equipamento hospitalar
+mobiliario hospitalar
+cama hospitalar
+maca hospitalar
+poltrona de acompanhante
+cadeira rodas
+monitor paciente
+equipamento medico
+insumo hospitalar
+kit de primeiros socorros
+AGRICULTURA
+drone agricola
+implemento agricola
+trator
+rocadeira
+pulverizador
+semente
+fertilizante
+cerca aramada
+SERVIÇOS E OBRAS
+obra
+engenharia
+reforma
+ampliacao
+construcao
+manutencao predial
+execucao obra
+servico engenharia
+memorial descritivo
+planilha orcamentaria
+construcao modular
+pavimentacao / asfalto
+cercamento / alambrado
+TERMOS ESTRATÉGICOS
+registro preco
+ata de registro de preco (arp)
+aquisicao equipamentos
+fornecimento
+dispensa licitacao
+inexigibilidade
+pregao eletronico
+concorrencia publica
+contratacao direta
+menor preco global
+menor preco por lote
+chamamento publico
