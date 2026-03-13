@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
-import stripe
 import json
 
 app = Flask(__name__)
@@ -26,18 +25,13 @@ if database_url:
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
         print(f"💾 Usando SQLite: {database_url}")
 else:
-    # Local - garantir que pasta data existe
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-    os.makedirs(data_dir, exist_ok=True)
-    db_path = os.path.join(data_dir, 'usuarios.db')
+    # Local - usar arquivo SQLite
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'usuarios.db')
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     print(f"💻 Local: {db_path}")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Configuração do Stripe (opcional por enquanto)
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_...')
-STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', 'pk_test_...')
 
 # Inicialização de extensões
 db = SQLAlchemy(app)
@@ -65,18 +59,12 @@ class User(UserMixin, db.Model):
     plano = db.Column(db.String(50), default='gratuito')
     status_assinatura = db.Column(db.String(20), default='ativo')
     
-    stripe_customer_id = db.Column(db.String(100))
-    stripe_subscription_id = db.Column(db.String(100))
-    
     data_registro = db.Column(db.DateTime, default=datetime.utcnow)
     data_ultimo_acesso = db.Column(db.DateTime)
     data_expiracao = db.Column(db.DateTime)
     
     licitacoes_consultadas = db.Column(db.Integer, default=0)
     limite_consultas = db.Column(db.Integer, default=10)
-    
-    notificacoes_email = db.Column(db.Boolean, default=True)
-    alertas_ativos = db.Column(db.JSON, default=list)
     
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -91,21 +79,6 @@ class User(UserMixin, db.Model):
         if self.plano == 'gratuito':
             return True
         return self.status_assinatura == 'ativo' and (self.data_expiracao is None or self.data_expiracao > datetime.utcnow())
-
-class Pagamento(db.Model):
-    __tablename__ = 'pagamentos'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    stripe_payment_intent_id = db.Column(db.String(100))
-    stripe_subscription_id = db.Column(db.String(100))
-    valor = db.Column(db.Numeric(10, 2))
-    moeda = db.Column(db.String(3), default='BRL')
-    status = db.Column(db.String(20))
-    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
-    data_confirmacao = db.Column(db.DateTime)
-    descricao = db.Column(db.String(255))
-    fatura_url = db.Column(db.String(500))
 
 class LogAcesso(db.Model):
     __tablename__ = 'logs_acesso'
@@ -132,8 +105,7 @@ PLANOS = {
             'Busca básica',
             'Visualização limitada',
             'Suporte por email'
-        ],
-        'stripe_price_id': None
+        ]
     },
     'basico': {
         'nome': 'Básico',
@@ -146,8 +118,7 @@ PLANOS = {
             'Exportar PDF',
             '10 alertas personalizados',
             'Suporte prioritário'
-        ],
-        'stripe_price_id': 'price_basico'
+        ]
     },
     'profissional': {
         'nome': 'Profissional',
@@ -161,8 +132,7 @@ PLANOS = {
             'Acesso à API',
             'Suporte VIP',
             'Relatórios mensais'
-        ],
-        'stripe_price_id': 'price_profissional'
+        ]
     },
     'empresarial': {
         'nome': 'Empresarial',
@@ -176,8 +146,7 @@ PLANOS = {
             'Suporte dedicado',
             'Treinamento incluso',
             'SLA garantido'
-        ],
-        'stripe_price_id': 'price_empresarial'
+        ]
     }
 }
 
@@ -187,18 +156,21 @@ PLANOS = {
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 def registrar_log(user_id, acao, detalhes=None):
-    log = LogAcesso(
-        user_id=user_id,
-        acao=acao,
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent'),
-        detalhes=detalhes
-    )
-    db.session.add(log)
-    db.session.commit()
+    try:
+        log = LogAcesso(
+            user_id=user_id,
+            acao=acao,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            detalhes=detalhes or {}
+        )
+        db.session.add(log)
+        db.session.commit()
+    except:
+        db.session.rollback()
 
 # ==========================================
 # ROTAS PÚBLICAS
@@ -249,22 +221,25 @@ def registro():
         email = request.form.get('email')
         password = request.form.get('password')
         nome = request.form.get('nome')
-        empresa = request.form.get('empresa')
-        cnpj = request.form.get('cnpj')
-        telefone = request.form.get('telefone')
+        empresa = request.form.get('empresa', '')
+        cnpj = request.form.get('cnpj', '')
+        telefone = request.form.get('telefone', '')
         plano = request.form.get('plano', 'gratuito')
         
+        # Verificar se email já existe
         if User.query.filter_by(email=email).first():
             flash('Este email já está cadastrado.', 'error')
             return redirect(url_for('registro'))
         
+        # Validar senha
         if len(password) < 8:
             flash('A senha deve ter pelo menos 8 caracteres.', 'error')
             return redirect(url_for('registro'))
         
+        # Criar novo usuário
         novo_usuario = User(
             email=email,
-            password_hash=generate_password_hash(password, method='pbkdf2:sha256'),
+            password_hash=generate_password_hash(password),
             nome=nome,
             empresa=empresa,
             cnpj=cnpj,
@@ -273,21 +248,27 @@ def registro():
             limite_consultas=10 if plano == 'gratuito' else 999999
         )
         
-        db.session.add(novo_usuario)
-        db.session.commit()
-        
-        if plano != 'gratuito':
-            login_user(novo_usuario)
-            return redirect(url_for('checkout', plano=plano))
-        
-        flash('Conta criada com sucesso! Faça login para começar.', 'success')
-        return redirect(url_for('login'))
+        try:
+            db.session.add(novo_usuario)
+            db.session.commit()
+            
+            if plano != 'gratuito':
+                login_user(novo_usuario)
+                return redirect(url_for('checkout', plano=plano))
+            
+            flash('Conta criada com sucesso! Faça login para começar.', 'success')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao criar conta: {str(e)}', 'error')
+            return redirect(url_for('registro'))
     
     return render_template('registro.html', planos=PLANOS)
 
 @app.route('/planos')
 def planos():
-    return render_template('planos.html', planos=PLANOS, stripe_key=STRIPE_PUBLIC_KEY)
+    return render_template('planos.html', planos=PLANOS)
 
 @app.route('/logout')
 @login_required
@@ -320,26 +301,16 @@ def dashboard():
                          estatisticas=estatisticas,
                          planos=PLANOS)
 
-@app.route('/checkout', methods=['GET', 'POST'])
+@app.route('/checkout/<plano>')
 @login_required
-def checkout():
-    plano_id = request.args.get('plano') or request.form.get('plano')
-    
-    if not plano_id or plano_id not in PLANOS:
+def checkout(plano):
+    if plano not in PLANOS:
         return redirect(url_for('planos'))
     
-    plano = PLANOS[plano_id]
-    
-    if plano['preco'] == 0:
-        current_user.plano = plano_id
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    
     return render_template('checkout.html', 
-                         plano=plano, 
-                         plano_id=plano_id,
-                         user=current_user,
-                         stripe_key=STRIPE_PUBLIC_KEY)
+                         plano=PLANOS[plano], 
+                         plano_id=plano,
+                         user=current_user)
 
 @app.route('/pagamento/sucesso')
 @login_required
@@ -350,46 +321,8 @@ def pagamento_sucesso():
 @app.route('/minha-conta')
 @login_required
 def minha_conta():
-    pagamentos = Pagamento.query.filter_by(user_id=current_user.id).order_by(Pagamento.data_criacao.desc()).all()
-    logs = LogAcesso.query.filter_by(user_id=current_user.id).order_by(LogAcesso.data_hora.desc()).limit(50).all()
-    
     return render_template('minha_conta.html', 
                          user=current_user, 
-                         pagamentos=pagamentos, 
-                         logs=logs,
-                         planos=PLANOS)
-
-# ==========================================
-# ROTAS ADMINISTRATIVAS
-# ==========================================
-
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    if not current_user.is_admin():
-        flash('Acesso negado.', 'error')
-        return redirect(url_for('dashboard'))
-    
-    total_usuarios = User.query.count()
-    usuarios_ativos = User.query.filter_by(status_assinatura='ativo').count()
-    usuarios_pendentes = User.query.filter_by(status_assinatura='pendente').count()
-    
-    return render_template('admin_dashboard.html',
-                         total_usuarios=total_usuarios,
-                         usuarios_ativos=usuarios_ativos,
-                         usuarios_pendentes=usuarios_pendentes,
-                         planos=PLANOS)
-
-@app.route('/admin/usuarios')
-@login_required
-def admin_usuarios():
-    if not current_user.is_admin():
-        return redirect(url_for('dashboard'))
-    
-    usuarios = User.query.order_by(User.data_registro.desc()).all()
-    
-    return render_template('admin_usuarios.html',
-                         usuarios=usuarios,
                          planos=PLANOS)
 
 # ==========================================
@@ -412,9 +345,7 @@ def api_licitacoes():
     dados = [
         {'id': 861, 'orgao': 'Ministério da Educação - MEC', 'objeto': 'Aquisição de equipamentos de informática para laboratórios', 'valor': 2263830.50, 'data': '2026-03-12'},
         {'id': 860, 'orgao': 'INCRA - Instituto Nacional de Colonização', 'objeto': 'Contratação de serviços de consultoria técnica especializada', 'valor': 805691.25, 'data': '2026-03-11'},
-        {'id': 859, 'orgao': 'UFPE - Universidade Federal de Pernambuco', 'objeto': 'Fornecimento de material de construção civil para obras', 'valor': 444650.00, 'data': '2026-03-10'},
-        {'id': 858, 'orgao': 'Hospital das Clínicas de Porto Alegre', 'objeto': 'Aquisição de equipamentos médicos hospitalares', 'valor': 4072520.75, 'data': '2026-03-09'},
-        {'id': 857, 'orgao': 'Prefeitura Municipal de São Paulo - SP', 'objeto': 'Reforma e ampliação de unidades escolares municipais', 'valor': 4521510.00, 'data': '2026-03-08'}
+        {'id': 859, 'orgao': 'UFPE - Universidade Federal de Pernambuco', 'objeto': 'Fornecimento de material de construção civil para obras', 'valor': 444650.00, 'data': '2026-03-10'}
     ]
     
     registrar_log(current_user.id, 'consulta_licitacao', {
@@ -430,13 +361,11 @@ def api_licitacoes():
 
 def criar_usuario_admin():
     """Cria usuário admin inicial se não existir"""
-    with app.app_context():
-        db.create_all()
-        
+    try:
         if not User.query.filter_by(email='admin@licitai.pro').first():
             admin = User(
                 email='admin@licitai.pro',
-                password_hash=generate_password_hash('Admin@123', method='pbkdf2:sha256'),
+                password_hash=generate_password_hash('Admin@123'),
                 nome='Administrador',
                 tipo='superadmin',
                 plano='empresarial',
@@ -446,9 +375,17 @@ def criar_usuario_admin():
             db.session.add(admin)
             db.session.commit()
             print('✅ Usuário admin criado: admin@licitai.pro / Admin@123')
+    except Exception as e:
+        print(f'⚠️ Erro ao criar admin: {e}')
+        db.session.rollback()
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         criar_usuario_admin()
     app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    # Para o Gunicorn (Render)
+    with app.app_context():
+        db.create_all()
+        criar_usuario_admin()
