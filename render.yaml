@@ -1,23 +1,13 @@
 services:
   - type: web
     name: licita-ai-pro
-    runtime: python
+    env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: SECRET_KEY
         generateValue: true
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_PUBLIC_KEY
         sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: DATABASE_URL
-        value: sqlite:////tmp/usuarios.db
-    disk:
-      name: data
-      mountPath: /tmp
-      sizeGB: 1

@@ -6,229 +6,206 @@
     <title>Minha Conta - LICITA AI PRO</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f7fa;
-            min-height: 100vh;
+        
+        :root {
+            --primary: #1e3a5f;
+            --primary-dark: #0f1f33;
+            --secondary: #c9a227;
+            --gray-100: #f7fafc;
+            --gray-200: #edf2f7;
+            --gray-300: #e2e8f0;
+            --gray-600: #4a5568;
         }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 15px 30px;
+        
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--secondary);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: white;
         }
-        .navbar h1 { font-size: 24px; }
-        .nav-links a {
+        
+        .header h1 {
+            color: var(--primary);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            background: var(--primary);
             color: white;
             text-decoration: none;
-            margin-left: 20px;
-            opacity: 0.9;
+            border-radius: 8px;
+            transition: all 0.3s;
         }
-        .nav-links a:hover { opacity: 1; }
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
+        
+        .btn:hover {
+            background: var(--primary-dark);
         }
+        
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
         }
+        
         .card {
             background: white;
             border-radius: 12px;
             padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        
         .card h2 {
-            color: #333;
+            color: var(--primary);
             margin-bottom: 20px;
-            font-size: 20px;
-            border-bottom: 2px solid #667eea;
+            font-size: 1.2em;
+            border-bottom: 2px solid var(--gray-200);
             padding-bottom: 10px;
         }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
+        
+        .info-group {
+            margin-bottom: 15px;
         }
-        .info-label { color: #666; font-weight: 500; }
-        .info-value { color: #333; font-weight: 600; }
-        .status-ativo { color: #28a745; }
-        .status-pendente { color: #ffc107; }
-        .status-cancelado { color: #dc3545; }
-        .plano-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+        
+        .info-label {
+            font-size: 0.8em;
+            color: var(--gray-600);
             text-transform: uppercase;
         }
-        .plano-gratuito { background: #e9ecef; color: #495057; }
-        .plano-basico { background: #cce5ff; color: #004085; }
-        .plano-profissional { background: #d4edda; color: #155724; }
-        .plano-empresarial { background: #f8d7da; color: #721c24; }
-        table {
+        
+        .info-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
         }
-        th, td {
+        
+        .table th {
             text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-        }
-        .valor { color: #28a745; font-weight: bold; }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            margin-top: 15px;
-            transition: background 0.2s;
-        }
-        .btn:hover { background: #5568d3; }
-        .logs-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .log-item {
             padding: 10px;
-            border-left: 3px solid #667eea;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-            font-size: 13px;
+            background: var(--gray-100);
+            color: var(--primary);
+            font-size: 0.8em;
         }
-        .log-time { color: #666; font-size: 11px; }
+        
+        .table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
         @media (max-width: 768px) {
-            .grid { grid-template-columns: 1fr; }
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
-<base target="_blank">
 </head>
 <body>
-    <nav class="navbar">
-        <h1>🚀 LICITA AI PRO</h1>
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('minha_conta') }}">Minha Conta</a>
-            {% if user.is_admin() %}
-                <a href="{{ url_for('admin_dashboard') }}">Admin</a>
-            {% endif %}
-            <a href="{{ url_for('logout') }}">Sair</a>
-        </div>
-    </nav>
-
     <div class="container">
+        <div class="header">
+            <h1>👤 Minha Conta</h1>
+            <a href="/dashboard" class="btn">← Voltar</a>
+        </div>
+        
         <div class="grid">
             <div class="card">
-                <h2>👤 Informações da Conta</h2>
-                <div class="info-row">
-                    <span class="info-label">Nome</span>
-                    <span class="info-value">{{ user.nome }}</span>
+                <h2>📋 Dados Pessoais</h2>
+                <div class="info-group">
+                    <div class="info-label">Nome</div>
+                    <div class="info-value">{{ user.nome }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Email</span>
-                    <span class="info-value">{{ user.email }}</span>
+                <div class="info-group">
+                    <div class="info-label">E-mail</div>
+                    <div class="info-value">{{ user.email }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Empresa</span>
-                    <span class="info-value">{{ user.empresa or 'Não informada' }}</span>
+                <div class="info-group">
+                    <div class="info-label">Empresa</div>
+                    <div class="info-value">{{ user.empresa or 'Não informado' }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">CNPJ</span>
-                    <span class="info-value">{{ user.cnpj or 'Não informado' }}</span>
+                <div class="info-group">
+                    <div class="info-label">CNPJ</div>
+                    <div class="info-value">{{ user.cnpj or 'Não informado' }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Telefone</span>
-                    <span class="info-value">{{ user.telefone or 'Não informado' }}</span>
+                <div class="info-group">
+                    <div class="info-label">Telefone</div>
+                    <div class="info-value">{{ user.telefone or 'Não informado' }}</div>
                 </div>
             </div>
-
+            
             <div class="card">
-                <h2>💎 Plano e Assinatura</h2>
-                <div class="info-row">
-                    <span class="info-label">Plano Atual</span>
-                    <span class="info-value">
-                        <span class="plano-badge plano-{{ user.plano }}">{{ planos[user.plano].nome }}</span>
-                    </span>
+                <h2>💳 Assinatura</h2>
+                <div class="info-group">
+                    <div class="info-label">Plano Atual</div>
+                    <div class="info-value">{{ planos[user.plano]['nome'] }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Status</span>
-                    <span class="info-value status-{{ user.status_assinatura }}">
-                        {{ user.status_assinatura.title() }}
-                    </span>
+                <div class="info-group">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">{{ user.status_assinatura|title }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Consultas Restantes</span>
-                    <span class="info-value">{{ user.limite_consultas - user.licitacoes_consultadas }}</span>
+                <div class="info-group">
+                    <div class="info-label">Consultas Realizadas</div>
+                    <div class="info-value">{{ user.licitacoes_consultadas }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Data de Expiração</span>
-                    <span class="info-value">
-                        {% if user.data_expiracao %}
-                            {{ user.data_expiracao.strftime('%d/%m/%Y') }}
-                        {% else %}
-                            Sem expiração
-                        {% endif %}
-                    </span>
+                <div class="info-group">
+                    <div class="info-label">Limite de Consultas</div>
+                    <div class="info-value">{{ user.limite_consultas }}</div>
                 </div>
-                <a href="{{ url_for('planos') }}" class="btn">Alterar Plano</a>
-            </div>
-
-            <div class="card">
-                <h2>💳 Histórico de Pagamentos</h2>
-                {% if pagamentos %}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Descrição</th>
-                                <th>Valor</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for pagamento in pagamentos %}
-                                <tr>
-                                    <td>{{ pagamento.data_criacao.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ pagamento.descricao or 'Assinatura' }}</td>
-                                    <td class="valor">R$ {{ "%.2f"|format(pagamento.valor) }}</td>
-                                    <td>{{ pagamento.status.title() }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p style="color: #666; text-align: center; padding: 20px;">
-                        Nenhum pagamento registrado ainda.
-                    </p>
-                {% endif %}
-            </div>
-
-            <div class="card">
-                <h2>📋 Logs de Acesso</h2>
-                <div class="logs-list">
-                    {% for log in logs %}
-                        <div class="log-item">
-                            <div class="log-time">{{ log.data_hora.strftime('%d/%m/%Y %H:%M') }}</div>
-                            <div>{{ log.acao.replace('_', ' ').title() }}</div>
-                        </div>
-                    {% endfor %}
+                <div class="info-group">
+                    <div class="info-label">Data de Registro</div>
+                    <div class="info-value">{{ user.data_registro.strftime('%d/%m/%Y') }}</div>
                 </div>
             </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>📊 Histórico de Pagamentos</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if pagamentos %}
+                        {% for pagamento in pagamentos %}
+                        <tr>
+                            <td>{{ pagamento.data_criacao.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ pagamento.descricao }}</td>
+                            <td>R$ {{ "%.2f"|format(pagamento.valor) }}</td>
+                            <td>{{ pagamento.status|title }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--gray-600);">
+                                Nenhum pagamento registrado
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 </body>

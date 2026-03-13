@@ -3,76 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planos e Preços - LICITA AI PRO</title>
+    <title>Planos - LICITA AI PRO</title>
     <style>
-        /* Estilos profissionais para página de planos */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
             --primary: #1e3a5f;
             --primary-dark: #0f1f33;
             --secondary: #c9a227;
-            --accent: #2c5282;
-            --success: #065f46;
-            --warning: #d97706;
             --gray-100: #f7fafc;
+            --gray-300: #e2e8f0;
+            --gray-600: #4a5568;
+            --success: #065f46;
         }
         
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--gray-100);
-            color: #1a202c;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-            color: white;
-            padding: 60px 20px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 15px;
-        }
-        
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-            max-width: 600px;
-            margin: 0 auto;
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%);
+            min-height: 100vh;
+            padding: 20px;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 60px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2em;
         }
         
         .planos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
         }
         
         .plano-card {
             background: white;
-            border-radius: 16px;
-            padding: 40px 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border: 2px solid transparent;
-            transition: all 0.3s;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
             position: relative;
+            overflow: hidden;
         }
         
         .plano-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
         
         .plano-card.destaque {
-            border-color: var(--secondary);
+            border: 3px solid var(--secondary);
             transform: scale(1.05);
         }
         
@@ -80,44 +75,23 @@
             transform: scale(1.05) translateY(-10px);
         }
         
-        .badge-popular {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--secondary);
-            color: var(--primary-dark);
-            padding: 6px 20px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
         .plano-nome {
             font-size: 1.5em;
+            font-weight: 700;
             color: var(--primary);
             margin-bottom: 10px;
-            font-weight: 700;
         }
         
         .plano-preco {
-            font-size: 3em;
+            font-size: 2.5em;
             font-weight: 800;
-            color: var(--gray-800);
-            margin-bottom: 5px;
+            color: var(--secondary);
+            margin-bottom: 20px;
         }
         
-        .plano-preco span {
+        .plano-preco small {
             font-size: 0.4em;
-            font-weight: 400;
-            color: #64748b;
-        }
-        
-        .plano-descricao {
-            color: #64748b;
-            margin-bottom: 25px;
-            font-size: 0.95em;
+            color: var(--gray-600);
         }
         
         .plano-features {
@@ -126,132 +100,96 @@
         }
         
         .plano-features li {
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9em;
+            padding: 8px 0;
+            color: var(--gray-600);
+            border-bottom: 1px solid var(--gray-300);
         }
         
-        .plano-features li::before {
-            content: '✓';
+        .plano-features li:last-child {
+            border-bottom: none;
+        }
+        
+        .plano-features li:before {
+            content: "✓";
             color: var(--success);
             font-weight: 700;
+            margin-right: 10px;
         }
         
-        .btn-assinar {
+        .btn {
             display: block;
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             text-align: center;
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-        
-        .btn-assinar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(30, 58, 95, 0.3);
-        }
-        
-        .btn-assinar.gratuito {
-            background: var(--gray-100);
-            color: var(--primary);
-            border: 2px solid var(--primary);
-        }
-        
-        .comparativo {
-            margin-top: 80px;
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        .comparativo h2 {
-            text-align: center;
-            color: var(--primary);
-            margin-bottom: 30px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        th {
-            background: var(--gray-100);
+            border-radius: 10px;
             font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 58, 95, 0.3);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
             color: var(--primary);
         }
         
-        .check {
-            color: var(--success);
-            font-weight: 700;
-        }
-        
-        .times {
-            color: #cbd5e1;
-        }
-        
-        .cta-final {
-            text-align: center;
-            margin-top: 60px;
-            padding: 40px;
+        .btn-outline:hover {
             background: var(--primary);
             color: white;
-            border-radius: 16px;
         }
         
-        .cta-final h2 {
-            margin-bottom: 20px;
-        }
-        
-        .btn-cta {
-            display: inline-block;
-            padding: 16px 40px;
+        .badge {
+            position: absolute;
+            top: 20px;
+            right: -30px;
             background: var(--secondary);
             color: var(--primary-dark);
-            text-decoration: none;
-            border-radius: 8px;
+            padding: 8px 40px;
+            transform: rotate(45deg);
             font-weight: 700;
-            margin-top: 15px;
+            font-size: 0.8em;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+        }
+        
+        .footer a {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>💼 Escolha o Plano Ideal para seu Negócio</h1>
-        <p>De profissionais liberais a grandes empresas, temos o plano perfeito para você encontrar e vencer licitações públicas</p>
-    </div>
-    
     <div class="container">
+        <div class="header">
+            <h1>⚖️ Escolha o melhor plano para você</h1>
+            <p>Comece gratuitamente e faça upgrade quando precisar</p>
+        </div>
+        
         <div class="planos-grid">
-            {% for plano_id, plano in planos.items() %}
-            <div class="plano-card {% if plano_id == 'profissional' %}destaque{% endif %}">
-                {% if plano_id == 'profissional' %}
-                <div class="badge-popular">Mais Popular</div>
+            {% for id, plano in planos.items() %}
+            <div class="plano-card {% if id == 'profissional' %}destaque{% endif %}">
+                {% if id == 'profissional' %}
+                <div class="badge">MAIS VENDIDO</div>
                 {% endif %}
                 
-                <h3 class="plano-nome">{{ plano.nome }}</h3>
+                <div class="plano-nome">{{ plano.nome }}</div>
                 <div class="plano-preco">
-                    {% if plano.preco == 0 %}
-                        Grátis
-                    {% else %}
-                        R$ {{ "%.0f"|format(plano.preco) }}<span>/mês</span>
-                    {% endif %}
+                    R$ {{ "%.2f"|format(plano.preco) }} <small>/mês</small>
                 </div>
-                <p class="plano-descricao">{{ plano.descricao }}</p>
                 
                 <ul class="plano-features">
                     {% for feature in plano.features %}
@@ -260,99 +198,20 @@
                 </ul>
                 
                 {% if current_user.is_authenticated %}
-                    {% if current_user.plano == plano_id %}
-                        <button class="btn-assinar gratuito" disabled>✓ Plano Atual</button>
-                    {% else %}
-                        <a href="{{ url_for('checkout', plano=plano_id) }}" class="btn-assinar {% if plano.preco == 0 %}gratuito{% endif %}">
-                            {% if plano.preco == 0 %}Começar Grátis{% else %}Assinar Agora{% endif %}
-                        </a>
-                    {% endif %}
+                    <a href="/checkout?plano={{ id }}" class="btn">Assinar Agora</a>
                 {% else %}
-                    <a href="{{ url_for('registro', plano=plano_id) }}" class="btn-assinar {% if plano.preco == 0 %}gratuito{% endif %}">
-                        {% if plano.preco == 0 %}Começar Grátis{% else %}Assinar Agora{% endif %}
-                    </a>
+                    <a href="/registro?plano={{ id }}" class="btn">Começar Grátis</a>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
         
-        <div class="comparativo">
-            <h2>📊 Comparativo Completo de Funcionalidades</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Recurso</th>
-                        <th>Gratuito</th>
-                        <th>Básico</th>
-                        <th>Profissional</th>
-                        <th>Empresarial</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Consultas por mês</td>
-                        <td>10</td>
-                        <td>100</td>
-                        <td>Ilimitado</td>
-                        <td>Ilimitado</td>
-                    </tr>
-                    <tr>
-                        <td>Precificação com IA</td>
-                        <td class="times">✗</td>
-                        <td class="times">✗</td>
-                        <td class="check">✓</td>
-                        <td class="check">✓</td>
-                    </tr>
-                    <tr>
-                        <td>Exportar PDF</td>
-                        <td class="times">✗</td>
-                        <td class="check">✓</td>
-                        <td class="check">✓</td>
-                        <td class="check">✓</td>
-                    </tr>
-                    <tr>
-                        <td>Exportar Excel</td>
-                        <td class="times">✗</td>
-                        <td class="times">✗</td>
-                        <td class="check">✓</td>
-                        <td class="check">✓</td>
-                    </tr>
-                    <tr>
-                        <td>Alertas personalizados</td>
-                        <td class="times">✗</td>
-                        <td>10</td>
-                        <td>50</td>
-                        <td>Ilimitado</td>
-                    </tr>
-                    <tr>
-                        <td>Acesso à API</td>
-                        <td class="times">✗</td>
-                        <td class="times">✗</td>
-                        <td class="check">✓</td>
-                        <td class="check">✓</td>
-                    </tr>
-                    <tr>
-                        <td>Multi-usuários</td>
-                        <td class="times">✗</td>
-                        <td class="times">✗</td>
-                        <td class="times">✗</td>
-                        <td class="check">Até 10</td>
-                    </tr>
-                    <tr>
-                        <td>Suporte</td>
-                        <td>Email</td>
-                        <td>Prioritário</td>
-                        <td>VIP</td>
-                        <td>Dedicado</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="cta-final">
-            <h2>🎯 Comece a ganhar licitações hoje mesmo</h2>
-            <p>14 dias de garantia em todos os planos pagos. Cancele quando quiser.</p>
-            <a href="{{ url_for('registro') }}" class="btn-cta">Criar Conta Gratuita</a>
+        <div class="footer">
+            {% if current_user.is_authenticated %}
+                <a href="/dashboard">← Voltar para Dashboard</a>
+            {% else %}
+                <a href="/">← Voltar para página inicial</a>
+            {% endif %}
         </div>
     </div>
 </body>

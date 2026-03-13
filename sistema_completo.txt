@@ -1,6 +1,6 @@
 ==========================================  
 LICITA_AI_PRO - CODIGO COMPLETO  
-Gerado em: 12.03.2026 17:35:07.87  
+Gerado em: 13.03.2026 13:54:21.56  
 ==========================================  
   
  
@@ -18,7 +18,30 @@ import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-desenvolvimento')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data/usuarios.db'
+
+# ==========================================
+# CONFIGURAﾃ�ﾃグ DO BANCO DE DADOS
+# ==========================================
+
+# Usar DATABASE_URL se disponﾃｭvel (Render), senﾃ｣o SQLite local
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Render ou PostgreSQL
+    if database_url.startswith('postgres'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
+        print("据 Usando PostgreSQL")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        print(f"沈 Usando SQLite: {database_url}")
+else:
+    # Local - garantir que pasta data existe
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, 'usuarios.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print(f"捗 Local: {db_path}")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuraﾃｧﾃ｣o do Stripe
@@ -47,27 +70,20 @@ class User(UserMixin, db.Model):
     cnpj = db.Column(db.String(20))
     telefone = db.Column(db.String(20))
     
-    # Tipo de usuﾃ｡rio: 'cliente', 'admin', 'superadmin'
     tipo = db.Column(db.String(20), default='cliente')
+    plano = db.Column(db.String(50), default='gratuito')
+    status_assinatura = db.Column(db.String(20), default='ativo')
     
-    # Plano de assinatura
-    plano = db.Column(db.String(50), default='gratuito')  # gratuito, basico, profissional, empresarial
-    status_assinatura = db.Column(db.String(20), default='ativo')  # ativo, pendente, cancelado, suspenso
-    
-    # Dados de pagamento
     stripe_customer_id = db.Column(db.String(100))
     stripe_subscription_id = db.Column(db.String(100))
     
-    # Controle de acesso
     data_registro = db.Column(db.DateTime, default=datetime.utcnow)
     data_ultimo_acesso = db.Column(db.DateTime)
     data_expiracao = db.Column(db.DateTime)
     
-    # Limites de uso
     licitacoes_consultadas = db.Column(db.Integer, default=0)
-    limite_consultas = db.Column(db.Integer, default=10)  # Gratuito: 10, Bﾃ｡sico: 100, Profissional: ilimitado
+    limite_consultas = db.Column(db.Integer, default=10)
     
-    # Preferﾃｪncias
     notificacoes_email = db.Column(db.Boolean, default=True)
     alertas_ativos = db.Column(db.JSON, default=list)
     
@@ -103,7 +119,7 @@ class Pagamento(db.Model):
     stripe_subscription_id = db.Column(db.String(100))
     valor = db.Column(db.Numeric(10, 2))
     moeda = db.Column(db.String(3), default='BRL')
-    status = db.Column(db.String(20))  # pendente, pago, falhou, reembolsado
+    status = db.Column(db.String(20))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_confirmacao = db.Column(db.DateTime)
     descricao = db.Column(db.String(255))
@@ -114,7 +130,7 @@ class LogAcesso(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    acao = db.Column(db.String(50))  # login, logout, consulta_licitacao, exportar, etc
+    acao = db.Column(db.String(50))
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(500))
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
@@ -149,7 +165,7 @@ PLANOS = {
             '10 alertas personalizados',
             'Suporte prioritﾃ｡rio'
         ],
-        'stripe_price_id': 'price_basico'  # Substituir pelo ID real do Stripe
+        'stripe_price_id': 'price_basico'
     },
     'profissional': {
         'nome': 'Profissional',
@@ -213,7 +229,7 @@ def formatar_moeda(valor):
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('landing.html')  # Pﾃ｡gina de vendas
+    return render_template('index.html')  # CORRIGIDO: era landing.html
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -259,7 +275,6 @@ def registro():
         telefone = request.form.get('telefone')
         plano = request.form.get('plano', 'gratuito')
         
-        # Validaﾃｧﾃｵes
         if User.query.filter_by(email=email).first():
             flash('Este email jﾃ｡ estﾃ｡ cadastrado.', 'error')
             return redirect(url_for('registro'))
@@ -268,7 +283,6 @@ def registro():
             flash('A senha deve ter pelo menos 8 caracteres.', 'error')
             return redirect(url_for('registro'))
         
-        # Criar usuﾃ｡rio
         novo_usuario = User(
             email=email,
             password_hash=generate_password_hash(password, method='pbkdf2:sha256'),
@@ -277,13 +291,12 @@ def registro():
             cnpj=cnpj,
             telefone=telefone,
             plano=plano,
-            limite_consultas=PLANOS[plano]['features'][0] if plano == 'gratuito' else 999999
+            limite_consultas=10 if plano == 'gratuito' else 999999
         )
         
         db.session.add(novo_usuario)
         db.session.commit()
         
-        # Se escolheu plano pago, redireciona para checkout
         if plano != 'gratuito':
             login_user(novo_usuario)
             return redirect(url_for('checkout', plano=plano))
@@ -306,7 +319,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ==========================================
-# ROTAS DO CLIENTE (REQUER LOGIN)
+# ROTAS DO CLIENTE
 # ==========================================
 
 @app.route('/dashboard')
@@ -316,7 +329,6 @@ def dashboard():
         flash('Sua assinatura expirou. Renove para continuar usando.', 'warning')
         return redirect(url_for('planos'))
     
-    # Dados para o dashboard
     estatisticas = {
         'consultas_restantes': max(0, current_user.limite_consultas - current_user.licitacoes_consultadas),
         'total_consultas': current_user.licitacoes_consultadas,
@@ -324,7 +336,7 @@ def dashboard():
         'data_expiracao': current_user.data_expiracao
     }
     
-    return render_template('index.html', 
+    return render_template('dashboard.html',  # CORRIGIDO: era index.html
                          user=current_user, 
                          estatisticas=estatisticas,
                          planos=PLANOS)
@@ -346,20 +358,15 @@ def checkout():
     
     if request.method == 'POST':
         try:
-            # Criar ou recuperar cliente Stripe
             if not current_user.stripe_customer_id:
                 customer = stripe.Customer.create(
                     email=current_user.email,
                     name=current_user.nome,
-                    metadata={
-                        'user_id': current_user.id,
-                        'plano': plano_id
-                    }
+                    metadata={'user_id': current_user.id, 'plano': plano_id}
                 )
                 current_user.stripe_customer_id = customer.id
                 db.session.commit()
             
-            # Criar sessﾃ｣o de checkout
             checkout_session = stripe.checkout.Session.create(
                 customer=current_user.stripe_customer_id,
                 payment_method_types=['card'],
@@ -370,7 +377,7 @@ def checkout():
                             'name': f'LICITA AI PRO - Plano {plano["nome"]}',
                             'description': plano['descricao'],
                         },
-                        'unit_amount': int(plano['preco'] * 100),  # Stripe usa centavos
+                        'unit_amount': int(plano['preco'] * 100),
                     },
                     'quantity': 1,
                 }],
@@ -405,7 +412,6 @@ def pagamento_sucesso():
             current_user.status_assinatura = 'ativo'
             current_user.data_expiracao = datetime.fromtimestamp(subscription.current_period_end)
             
-            # Atualizar limite de consultas baseado no plano
             if current_user.plano == 'basico':
                 current_user.limite_consultas = 100
             elif current_user.plano in ['profissional', 'empresarial']:
@@ -413,7 +419,6 @@ def pagamento_sucesso():
             
             db.session.commit()
             
-            # Registrar pagamento
             pagamento = Pagamento(
                 user_id=current_user.id,
                 stripe_payment_intent_id=session.payment_intent,
@@ -468,7 +473,6 @@ def admin_dashboard():
         flash('Acesso negado.', 'error')
         return redirect(url_for('dashboard'))
     
-    # Estatﾃｭsticas gerais
     total_usuarios = User.query.count()
     usuarios_ativos = User.query.filter_by(status_assinatura='ativo').count()
     usuarios_pendentes = User.query.filter_by(status_assinatura='pendente').count()
@@ -488,7 +492,7 @@ def admin_dashboard():
     ultimos_usuarios = User.query.order_by(User.data_registro.desc()).limit(10).all()
     ultimos_pagamentos = Pagamento.query.filter_by(status='pago').order_by(Pagamento.data_confirmacao.desc()).limit(10).all()
     
-    return render_template('admin/dashboard.html',
+    return render_template('admin_dashboard.html',  # CORRIGIDO: nﾃ｣o usa pasta admin/
                          total_usuarios=total_usuarios,
                          usuarios_ativos=usuarios_ativos,
                          usuarios_pendentes=usuarios_pendentes,
@@ -507,7 +511,6 @@ def admin_usuarios():
     pagina = request.args.get('pagina', 1, type=int)
     por_pagina = 50
     
-    # Filtros
     filtro_plano = request.args.get('plano', '')
     filtro_status = request.args.get('status', '')
     busca = request.args.get('busca', '')
@@ -531,7 +534,7 @@ def admin_usuarios():
         page=pagina, per_page=por_pagina, error_out=False
     )
     
-    return render_template('admin/usuarios.html', 
+    return render_template('admin_usuarios.html',  # CORRIGIDO
                          usuarios=usuarios,
                          planos=PLANOS,
                          filtros={'plano': filtro_plano, 'status': filtro_status, 'busca': busca})
@@ -554,7 +557,6 @@ def admin_editar_usuario(id):
         usuario.status_assinatura = request.form.get('status_assinatura')
         usuario.limite_consultas = request.form.get('limite_consultas', type=int)
         
-        # Se mudou o plano, atualizar data de expiraﾃｧﾃ｣o
         if request.form.get('data_expiracao'):
             usuario.data_expiracao = datetime.fromisoformat(request.form.get('data_expiracao'))
         
@@ -562,17 +564,13 @@ def admin_editar_usuario(id):
         flash('Usuﾃ｡rio atualizado com sucesso.', 'success')
         return redirect(url_for('admin_usuarios'))
     
-    return render_template('admin/editar_usuario.html', usuario=usuario, planos=PLANOS)
+    return render_template('admin_editar_usuario.html', usuario=usuario, planos=PLANOS)  # CORRIGIDO
 
 @app.route('/admin/financeiro')
 @login_required
 def admin_financeiro():
     if not current_user.is_admin():
         return redirect(url_for('dashboard'))
-    
-    # Relatﾃｳrio financeiro
-    mes_atual = datetime.utcnow().month
-    ano_atual = datetime.utcnow().year
     
     receita_por_mes = db.session.query(
         db.func.strftime('%Y-%m', Pagamento.data_confirmacao),
@@ -592,36 +590,12 @@ def admin_financeiro():
         Pagamento.status == 'pago'
     ).group_by(User.plano).all()
     
-    return render_template('admin/financeiro.html',
+    return render_template('admin_financeiro.html',  # CORRIGIDO
                          receita_por_mes=receita_por_mes,
                          receita_por_plano=dict(receita_por_plano))
 
-@app.route('/admin/api/estatisticas')
-@login_required
-def admin_api_estatisticas():
-    if not current_user.is_admin():
-        return jsonify({'error': 'Acesso negado'}), 403
-    
-    # Dados para grﾃ｡ficos em tempo real
-    hoje = datetime.utcnow().date()
-    
-    acessos_hoje = LogAcesso.query.filter(
-        db.func.date(LogAcesso.data_hora) == hoje
-    ).count()
-    
-    novos_usuarios_hoje = User.query.filter(
-        db.func.date(User.data_registro) == hoje
-    ).count()
-    
-    return jsonify({
-        'acessos_hoje': acessos_hoje,
-        'novos_usuarios_hoje': novos_usuarios_hoje,
-        'total_usuarios': User.query.count(),
-        'assinaturas_ativas': User.query.filter_by(status_assinatura='ativo').count()
-    })
-
 # ==========================================
-# WEBHOOKS DO STRIPE
+# WEBHOOKS E APIs
 # ==========================================
 
 @app.route('/webhook/stripe', methods=['POST'])
@@ -639,10 +613,8 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError as e:
         return 'Invalid signature', 400
     
-    # Processar eventos
     if event['type'] == 'invoice.payment_succeeded':
         subscription = event['data']['object']
-        # Atualizar status do usuﾃ｡rio
         user = User.query.filter_by(stripe_subscription_id=subscription['id']).first()
         if user:
             user.status_assinatura = 'ativo'
@@ -667,26 +639,19 @@ def stripe_webhook():
     
     return 'OK', 200
 
-# ==========================================
-# APIs Pﾃ咤LICAS (COM AUTENTICAﾃ�ﾃグ)
-# ==========================================
-
 @app.route('/api/licitacoes')
 @login_required
 def api_licitacoes():
-    # Verificar limite de consultas
     if current_user.licitacoes_consultadas >= current_user.limite_consultas:
         return jsonify({
             'error': 'Limite de consultas atingido',
             'mensagem': 'Faﾃｧa upgrade do seu plano para continuar consultando.'
         }), 429
     
-    # Incrementar contador
     current_user.licitacoes_consultadas += 1
     db.session.commit()
     
-    # Retornar dados (integrar com sua API real de licitaﾃｧﾃｵes)
-    dados = []  # Sua lﾃｳgica de busca aqui
+    dados = []
     
     registrar_log(current_user.id, 'consulta_licitacao', {
         'resultados': len(dados),
@@ -722,7 +687,6 @@ if __name__ == '__main__':
     criar_usuario_admin()
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
-    # Produﾃｧﾃ｣o (Render)
     criar_usuario_admin() 
 [FIM DO ARQUIVO app.py] 
 
@@ -762,7 +726,7 @@ ARQUIVO: sistema_completo.txt
 ========================================== 
 ==========================================  
 LICITA_AI_PRO - CODIGO COMPLETO  
-Gerado em: 12.03.2026 17:35:07.87  
+Gerado em: 13.03.2026 13:54:21.56  
 ==========================================  
   
  
@@ -780,7 +744,30 @@ import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-desenvolvimento')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data/usuarios.db'
+
+# ==========================================
+# CONFIGURAﾃ�ﾃグ DO BANCO DE DADOS
+# ==========================================
+
+# Usar DATABASE_URL se disponﾃｭvel (Render), senﾃ｣o SQLite local
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Render ou PostgreSQL
+    if database_url.startswith('postgres'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
+        print("据 Usando PostgreSQL")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        print(f"沈 Usando SQLite: {database_url}")
+else:
+    # Local - garantir que pasta data existe
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, 'usuarios.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print(f"捗 Local: {db_path}")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuraﾃｧﾃ｣o do Stripe
@@ -809,27 +796,20 @@ class User(UserMixin, db.Model):
     cnpj = db.Column(db.String(20))
     telefone = db.Column(db.String(20))
     
-    # Tipo de usuﾃ｡rio: 'cliente', 'admin', 'superadmin'
     tipo = db.Column(db.String(20), default='cliente')
+    plano = db.Column(db.String(50), default='gratuito')
+    status_assinatura = db.Column(db.String(20), default='ativo')
     
-    # Plano de assinatura
-    plano = db.Column(db.String(50), default='gratuito')  # gratuito, basico, profissional, empresarial
-    status_assinatura = db.Column(db.String(20), default='ativo')  # ativo, pendente, cancelado, suspenso
-    
-    # Dados de pagamento
     stripe_customer_id = db.Column(db.String(100))
     stripe_subscription_id = db.Column(db.String(100))
     
-    # Controle de acesso
     data_registro = db.Column(db.DateTime, default=datetime.utcnow)
     data_ultimo_acesso = db.Column(db.DateTime)
     data_expiracao = db.Column(db.DateTime)
     
-    # Limites de uso
     licitacoes_consultadas = db.Column(db.Integer, default=0)
-    limite_consultas = db.Column(db.Integer, default=10)  # Gratuito: 10, Bﾃ｡sico: 100, Profissional: ilimitado
+    limite_consultas = db.Column(db.Integer, default=10)
     
-    # Preferﾃｪncias
     notificacoes_email = db.Column(db.Boolean, default=True)
     alertas_ativos = db.Column(db.JSON, default=list)
     
@@ -865,7 +845,7 @@ class Pagamento(db.Model):
     stripe_subscription_id = db.Column(db.String(100))
     valor = db.Column(db.Numeric(10, 2))
     moeda = db.Column(db.String(3), default='BRL')
-    status = db.Column(db.String(20))  # pendente, pago, falhou, reembolsado
+    status = db.Column(db.String(20))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_confirmacao = db.Column(db.DateTime)
     descricao = db.Column(db.String(255))
@@ -876,7 +856,7 @@ class LogAcesso(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    acao = db.Column(db.String(50))  # login, logout, consulta_licitacao, exportar, etc
+    acao = db.Column(db.String(50))
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(500))
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
@@ -911,7 +891,7 @@ PLANOS = {
             '10 alertas personalizados',
             'Suporte prioritﾃ｡rio'
         ],
-        'stripe_price_id': 'price_basico'  # Substituir pelo ID real do Stripe
+        'stripe_price_id': 'price_basico'
     },
     'profissional': {
         'nome': 'Profissional',
@@ -975,7 +955,7 @@ def formatar_moeda(valor):
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('landing.html')  # Pﾃ｡gina de vendas
+    return render_template('index.html')  # CORRIGIDO: era landing.html
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1021,7 +1001,6 @@ def registro():
         telefone = request.form.get('telefone')
         plano = request.form.get('plano', 'gratuito')
         
-        # Validaﾃｧﾃｵes
         if User.query.filter_by(email=email).first():
             flash('Este email jﾃ｡ estﾃ｡ cadastrado.', 'error')
             return redirect(url_for('registro'))
@@ -1030,7 +1009,6 @@ def registro():
             flash('A senha deve ter pelo menos 8 caracteres.', 'error')
             return redirect(url_for('registro'))
         
-        # Criar usuﾃ｡rio
         novo_usuario = User(
             email=email,
             password_hash=generate_password_hash(password, method='pbkdf2:sha256'),
@@ -1039,13 +1017,12 @@ def registro():
             cnpj=cnpj,
             telefone=telefone,
             plano=plano,
-            limite_consultas=PLANOS[plano]['features'][0] if plano == 'gratuito' else 999999
+            limite_consultas=10 if plano == 'gratuito' else 999999
         )
         
         db.session.add(novo_usuario)
         db.session.commit()
         
-        # Se escolheu plano pago, redireciona para checkout
         if plano != 'gratuito':
             login_user(novo_usuario)
             return redirect(url_for('checkout', plano=plano))
@@ -1068,7 +1045,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ==========================================
-# ROTAS DO CLIENTE (REQUER LOGIN)
+# ROTAS DO CLIENTE
 # ==========================================
 
 @app.route('/dashboard')
@@ -1078,7 +1055,6 @@ def dashboard():
         flash('Sua assinatura expirou. Renove para continuar usando.', 'warning')
         return redirect(url_for('planos'))
     
-    # Dados para o dashboard
     estatisticas = {
         'consultas_restantes': max(0, current_user.limite_consultas - current_user.licitacoes_consultadas),
         'total_consultas': current_user.licitacoes_consultadas,
@@ -1086,7 +1062,7 @@ def dashboard():
         'data_expiracao': current_user.data_expiracao
     }
     
-    return render_template('index.html', 
+    return render_template('dashboard.html',  # CORRIGIDO: era index.html
                          user=current_user, 
                          estatisticas=estatisticas,
                          planos=PLANOS)
@@ -1108,20 +1084,15 @@ def checkout():
     
     if request.method == 'POST':
         try:
-            # Criar ou recuperar cliente Stripe
             if not current_user.stripe_customer_id:
                 customer = stripe.Customer.create(
                     email=current_user.email,
                     name=current_user.nome,
-                    metadata={
-                        'user_id': current_user.id,
-                        'plano': plano_id
-                    }
+                    metadata={'user_id': current_user.id, 'plano': plano_id}
                 )
                 current_user.stripe_customer_id = customer.id
                 db.session.commit()
             
-            # Criar sessﾃ｣o de checkout
             checkout_session = stripe.checkout.Session.create(
                 customer=current_user.stripe_customer_id,
                 payment_method_types=['card'],
@@ -1132,7 +1103,7 @@ def checkout():
                             'name': f'LICITA AI PRO - Plano {plano["nome"]}',
                             'description': plano['descricao'],
                         },
-                        'unit_amount': int(plano['preco'] * 100),  # Stripe usa centavos
+                        'unit_amount': int(plano['preco'] * 100),
                     },
                     'quantity': 1,
                 }],
@@ -1167,7 +1138,6 @@ def pagamento_sucesso():
             current_user.status_assinatura = 'ativo'
             current_user.data_expiracao = datetime.fromtimestamp(subscription.current_period_end)
             
-            # Atualizar limite de consultas baseado no plano
             if current_user.plano == 'basico':
                 current_user.limite_consultas = 100
             elif current_user.plano in ['profissional', 'empresarial']:
@@ -1175,7 +1145,6 @@ def pagamento_sucesso():
             
             db.session.commit()
             
-            # Registrar pagamento
             pagamento = Pagamento(
                 user_id=current_user.id,
                 stripe_payment_intent_id=session.payment_intent,
@@ -1230,7 +1199,6 @@ def admin_dashboard():
         flash('Acesso negado.', 'error')
         return redirect(url_for('dashboard'))
     
-    # Estatﾃｭsticas gerais
     total_usuarios = User.query.count()
     usuarios_ativos = User.query.filter_by(status_assinatura='ativo').count()
     usuarios_pendentes = User.query.filter_by(status_assinatura='pendente').count()
@@ -1250,7 +1218,7 @@ def admin_dashboard():
     ultimos_usuarios = User.query.order_by(User.data_registro.desc()).limit(10).all()
     ultimos_pagamentos = Pagamento.query.filter_by(status='pago').order_by(Pagamento.data_confirmacao.desc()).limit(10).all()
     
-    return render_template('admin/dashboard.html',
+    return render_template('admin_dashboard.html',  # CORRIGIDO: nﾃ｣o usa pasta admin/
                          total_usuarios=total_usuarios,
                          usuarios_ativos=usuarios_ativos,
                          usuarios_pendentes=usuarios_pendentes,
@@ -1269,7 +1237,6 @@ def admin_usuarios():
     pagina = request.args.get('pagina', 1, type=int)
     por_pagina = 50
     
-    # Filtros
     filtro_plano = request.args.get('plano', '')
     filtro_status = request.args.get('status', '')
     busca = request.args.get('busca', '')
@@ -1293,7 +1260,7 @@ def admin_usuarios():
         page=pagina, per_page=por_pagina, error_out=False
     )
     
-    return render_template('admin/usuarios.html', 
+    return render_template('admin_usuarios.html',  # CORRIGIDO
                          usuarios=usuarios,
                          planos=PLANOS,
                          filtros={'plano': filtro_plano, 'status': filtro_status, 'busca': busca})
@@ -1316,7 +1283,6 @@ def admin_editar_usuario(id):
         usuario.status_assinatura = request.form.get('status_assinatura')
         usuario.limite_consultas = request.form.get('limite_consultas', type=int)
         
-        # Se mudou o plano, atualizar data de expiraﾃｧﾃ｣o
         if request.form.get('data_expiracao'):
             usuario.data_expiracao = datetime.fromisoformat(request.form.get('data_expiracao'))
         
@@ -1324,17 +1290,13 @@ def admin_editar_usuario(id):
         flash('Usuﾃ｡rio atualizado com sucesso.', 'success')
         return redirect(url_for('admin_usuarios'))
     
-    return render_template('admin/editar_usuario.html', usuario=usuario, planos=PLANOS)
+    return render_template('admin_editar_usuario.html', usuario=usuario, planos=PLANOS)  # CORRIGIDO
 
 @app.route('/admin/financeiro')
 @login_required
 def admin_financeiro():
     if not current_user.is_admin():
         return redirect(url_for('dashboard'))
-    
-    # Relatﾃｳrio financeiro
-    mes_atual = datetime.utcnow().month
-    ano_atual = datetime.utcnow().year
     
     receita_por_mes = db.session.query(
         db.func.strftime('%Y-%m', Pagamento.data_confirmacao),
@@ -1354,36 +1316,12 @@ def admin_financeiro():
         Pagamento.status == 'pago'
     ).group_by(User.plano).all()
     
-    return render_template('admin/financeiro.html',
+    return render_template('admin_financeiro.html',  # CORRIGIDO
                          receita_por_mes=receita_por_mes,
                          receita_por_plano=dict(receita_por_plano))
 
-@app.route('/admin/api/estatisticas')
-@login_required
-def admin_api_estatisticas():
-    if not current_user.is_admin():
-        return jsonify({'error': 'Acesso negado'}), 403
-    
-    # Dados para grﾃ｡ficos em tempo real
-    hoje = datetime.utcnow().date()
-    
-    acessos_hoje = LogAcesso.query.filter(
-        db.func.date(LogAcesso.data_hora) == hoje
-    ).count()
-    
-    novos_usuarios_hoje = User.query.filter(
-        db.func.date(User.data_registro) == hoje
-    ).count()
-    
-    return jsonify({
-        'acessos_hoje': acessos_hoje,
-        'novos_usuarios_hoje': novos_usuarios_hoje,
-        'total_usuarios': User.query.count(),
-        'assinaturas_ativas': User.query.filter_by(status_assinatura='ativo').count()
-    })
-
 # ==========================================
-# WEBHOOKS DO STRIPE
+# WEBHOOKS E APIs
 # ==========================================
 
 @app.route('/webhook/stripe', methods=['POST'])
@@ -1401,10 +1339,8 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError as e:
         return 'Invalid signature', 400
     
-    # Processar eventos
     if event['type'] == 'invoice.payment_succeeded':
         subscription = event['data']['object']
-        # Atualizar status do usuﾃ｡rio
         user = User.query.filter_by(stripe_subscription_id=subscription['id']).first()
         if user:
             user.status_assinatura = 'ativo'
@@ -1429,26 +1365,19 @@ def stripe_webhook():
     
     return 'OK', 200
 
-# ==========================================
-# APIs Pﾃ咤LICAS (COM AUTENTICAﾃ�ﾃグ)
-# ==========================================
-
 @app.route('/api/licitacoes')
 @login_required
 def api_licitacoes():
-    # Verificar limite de consultas
     if current_user.licitacoes_consultadas >= current_user.limite_consultas:
         return jsonify({
             'error': 'Limite de consultas atingido',
             'mensagem': 'Faﾃｧa upgrade do seu plano para continuar consultando.'
         }), 429
     
-    # Incrementar contador
     current_user.licitacoes_consultadas += 1
     db.session.commit()
     
-    # Retornar dados (integrar com sua API real de licitaﾃｧﾃｵes)
-    dados = []  # Sua lﾃｳgica de busca aqui
+    dados = []
     
     registrar_log(current_user.id, 'consulta_licitacao', {
         'resultados': len(dados),
@@ -1484,7 +1413,6 @@ if __name__ == '__main__':
     criar_usuario_admin()
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
-    # Produﾃｧﾃ｣o (Render)
     criar_usuario_admin() 
 [FIM DO ARQUIVO app.py] 
 
@@ -1523,7 +1451,15 @@ itsdangerous==2.1.2
 ARQUIVO: sistema_completo.txt 
 ========================================== 
 ==========================================  
-LICITA 
+LICITA_AI_PRO - CODIGO COMPLETO  
+Gerado em: 13.03.2026 13:54:21.56  
+==========================================  
+  
+ 
+========================================== 
+ARQUIVO: app.py 
+========================================== 
+from flask import Flask, render_template, jsonify,  
 [FIM DO ARQUIVO sistema_completo.txt] 
 
 Estrutura de pastas: 
@@ -1604,16 +1540,25 @@ D:.
 ｳ           fontes_hibrido.cpython-312.pyc
 ｳ           
 ﾃﾄﾄﾄdata
+ｳ       .txt
 ｳ       licitacoes.db
 ｳ       
 ﾃﾄﾄﾄmodules
 ﾃﾄﾄﾄstatic
 ﾀﾄﾄﾄtemplates
+        admin.html
         admin.txt
+        admin_dashboard.html
+        admin_editar_usuario.html
+        admin_financeiro.html
+        admin_usuarios.html
+        checkout.html
         dashboard.html
         index.html
         login.html
+        minha_conta.html
         planos.html
         registro.html
+        requirements.txt
         start.bat
         
